@@ -17,6 +17,7 @@ from app.gateway.routers import (
     suggestions,
     threads,
     uploads,
+    user_threads,
 )
 from deerflow.config.app_config import get_app_config
 
@@ -44,6 +45,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         raise RuntimeError(error_msg) from e
     config = get_gateway_config()
     logger.info(f"Starting API Gateway on {config.host}:{config.port}")
+
+    # Initialize database engine (async + sync)
+    from deerflow.database.connection import init_async_engine, close_async_engine, get_sync_engine, get_async_engine
+    from deerflow.database.thread_user import create_table as create_thread_users_table
+
+    engine = await init_async_engine()
+    if engine:
+        await create_thread_users_table(engine)
+        logger.info("thread_users table ensured")
 
     # Initialize checkpointer for runs API
     try:
@@ -199,6 +209,8 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
 
     # Runs API is mounted at /api/threads/{thread_id}/runs
     app.include_router(runs.router)
+
+    app.include_router(user_threads.router)
 
     @app.get("/health", tags=["health"])
     async def health_check() -> dict:
