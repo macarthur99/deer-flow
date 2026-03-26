@@ -163,8 +163,9 @@ class ThreadState(AgentState):
               ▼                                         ▼
 ┌─────────────────────────┐              ┌─────────────────────────┐
 │  LocalSandboxProvider   │              │  AioSandboxProvider     │
-│  (packages/harness/deerflow/sandbox/local.py) │              │  (packages/harness/deerflow/community/)       │
-│                         │              │                         │
+│  (packages/harness/     │              │  (packages/harness/     │
+│   deerflow/sandbox/     │              │   deerflow/community/)  │
+│   local/)               │              │                         │
 │  - Singleton instance   │              │  - Docker-based         │
 │  - Direct execution     │              │  - Isolated containers  │
 │  - Development use      │              │  - Production use       │
@@ -197,7 +198,8 @@ class ThreadState(AgentState):
 
 ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
 │   Built-in Tools    │  │  Configured Tools   │  │     MCP Tools       │
-│  (packages/harness/deerflow/tools/)       │  │  (config.yaml)      │  │  (extensions.json)  │
+│  (packages/harness/ │  │  (config.yaml)      │  │  (extensions.json)  │
+│   deerflow/tools/)  │  │                     │  │                     │
 ├─────────────────────┤  ├─────────────────────┤  ├─────────────────────┤
 │ - present_file      │  │ - web_search        │  │ - github            │
 │ - ask_clarification │  │ - web_fetch         │  │ - filesystem        │
@@ -213,7 +215,8 @@ class ThreadState(AgentState):
                                    ▼
                       ┌─────────────────────────┐
                       │   get_available_tools() │
-                      │   (packages/harness/deerflow/tools/__init__)  │
+                      │   (packages/harness/    │
+                      │    deerflow/tools/)     │
                       └─────────────────────────┘
 ```
 
@@ -222,7 +225,7 @@ class ThreadState(AgentState):
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          Model Factory                                   │
-│                     (packages/harness/deerflow/models/factory.py)                              │
+│              (packages/harness/deerflow/models/factory.py)               │
 └─────────────────────────────────────────────────────────────────────────┘
 
 config.yaml:
@@ -269,7 +272,7 @@ config.yaml:
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          MCP Integration                                 │
-│                        (packages/harness/deerflow/mcp/manager.py)                              │
+│                (packages/harness/deerflow/mcp/client.py)                 │
 └─────────────────────────────────────────────────────────────────────────┘
 
 extensions_config.json:
@@ -307,7 +310,7 @@ extensions_config.json:
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          Skills System                                   │
-│                       (packages/harness/deerflow/skills/loader.py)                             │
+│               (packages/harness/deerflow/skills/loader.py)               │
 └─────────────────────────────────────────────────────────────────────────┘
 
 Directory Structure:

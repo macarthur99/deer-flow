@@ -464,6 +464,68 @@ DELETE /api/threads/{thread_id}/uploads/{filename}
 }
 ```
 
+### Runs (Conversation API)
+
+#### Stream Conversation
+
+Stream a conversation turn with SSE (Server-Sent Events) format, compatible with LangGraph API.
+
+```http
+POST /api/threads/{thread_id}/runs/stream
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "input": {
+    "messages": [
+      {"role": "human", "content": "Hello, what's 2+2?"}
+    ]
+  },
+  "config": {
+    "recursion_limit": 100
+  },
+  "stream_mode": ["values", "messages-tuple"]
+}
+```
+
+**Response:** SSE stream with events:
+```
+event: messages-tuple
+data: {"type": "ai", "content": "2+2 equals 4.", "id": "msg_123"}
+
+event: values
+data: {"title": "Math Question", "messages": [...], "artifacts": []}
+
+event: end
+data: {"usage": {"input_tokens": 50, "output_tokens": 20, "total_tokens": 70}}
+```
+
+#### Get Thread History
+
+Retrieve conversation history from checkpoint storage.
+
+```http
+GET /api/threads/{thread_id}/history
+```
+
+**Response:**
+```json
+{
+  "thread_id": "abc123",
+  "title": "Math Question",
+  "messages": [
+    {"type": "human", "content": "Hello, what's 2+2?", "id": "msg_1"},
+    {"type": "ai", "content": "2+2 equals 4.", "id": "msg_2"}
+  ]
+}
+```
+
+**Error Responses:**
+- `404` - Thread not found
+- `503` - Checkpointer not available
+
 ### Thread Cleanup
 
 Remove DeerFlow-managed local thread files under `.deer-flow/threads/{thread_id}` after the LangGraph thread itself has been deleted.

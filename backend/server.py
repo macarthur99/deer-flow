@@ -7,6 +7,7 @@ from pathlib import Path
 os.environ.setdefault("LANGGRAPH_RUNTIME_EDITION", "inmem")
 os.environ.setdefault("DATABASE_URI", f"sqlite:///{Path.cwd() / '.langgraph_api' / 'langgraph.db'}")
 os.environ.setdefault("REDIS_URI", "")
+#os.environ.setdefault("LANGGRAPH_CONFIG", str(Path.cwd() / "langgraph.json"))
 
 import logging
 from fastapi import FastAPI

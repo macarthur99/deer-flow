@@ -36,7 +36,7 @@ DeerFlow is a LangGraph-based AI super agent with sandbox execution, persistent 
 
 **Request Routing** (via Nginx):
 - `/api/langgraph/*` → LangGraph Server - agent interactions, threads, streaming
-- `/api/*` (other) → Gateway API - models, MCP, skills, memory, artifacts, uploads, thread-local cleanup
+- `/api/*` (other) → Gateway API - models, MCP, skills, memory, artifacts, uploads, runs (conversation API), thread-local cleanup
 - `/` (non-API) → Frontend - Next.js web interface
 
 ---
@@ -311,6 +311,31 @@ MCP servers and skill states in a single file:
 - `DEER_FLOW_EXTENSIONS_CONFIG_PATH` - Override extensions_config.json location
 - Model API keys: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, etc.
 - Tool API keys: `TAVILY_API_KEY`, `GITHUB_TOKEN`, etc.
+
+---
+
+## API Usage
+
+### Runs API (Conversation)
+
+The Gateway provides a REST API for direct conversation with the agent, compatible with LangGraph's streaming format.
+
+**Stream conversation:**
+```bash
+curl -N -X POST http://localhost:8001/api/threads/my-thread/runs/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": {"messages": [{"role": "human", "content": "Hello"}]},
+    "stream_mode": ["values", "messages-tuple"]
+  }'
+```
+
+**Get history:**
+```bash
+curl http://localhost:8001/api/threads/my-thread/history
+```
+
+See [docs/API.md](docs/API.md) for complete API reference.
 
 ---
 

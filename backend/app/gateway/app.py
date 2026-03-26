@@ -12,6 +12,7 @@ from app.gateway.routers import (
     mcp,
     memory,
     models,
+    runs,
     skills,
     suggestions,
     threads,
@@ -44,29 +45,41 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     config = get_gateway_config()
     logger.info(f"Starting API Gateway on {config.host}:{config.port}")
 
-    # NOTE: MCP tools initialization is NOT done here because:
-    # 1. Gateway doesn't use MCP tools - they are used by Agents in the LangGraph Server
-    # 2. Gateway and LangGraph Server are separate processes with independent caches
-    # MCP tools are lazily initialized in LangGraph Server when first needed
-
-    # Start IM channel service if any channels are configured
+    # Initialize checkpointer for runs API
     try:
-        from app.channels.service import start_channel_service
+        from deerflow.agents.checkpointer import make_checkpointer
 
-        channel_service = await start_channel_service()
-        logger.info("Channel service started: %s", channel_service.get_status())
+        async with make_checkpointer() as checkpointer:
+            app.state.checkpointer = checkpointer
+            logger.info("Checkpointer initialized for runs API")
+
+            # NOTE: MCP tools initialization is NOT done here because:
+            # 1. Gateway doesn't use MCP tools - they are used by Agents in the LangGraph Server
+            # 2. Gateway and LangGraph Server are separate processes with independent caches
+            # MCP tools are lazily initialized in LangGraph Server when first needed
+
+            # Start IM channel service if any channels are configured
+            try:
+                from app.channels.service import start_channel_service
+
+                channel_service = await start_channel_service()
+                logger.info("Channel service started: %s", channel_service.get_status())
+            except Exception:
+                logger.exception("No IM channels configured or channel service failed to start")
+
+            yield
+
+            # Stop channel service on shutdown
+            try:
+                from app.channels.service import stop_channel_service
+
+                await stop_channel_service()
+            except Exception:
+                logger.exception("Failed to stop channel service")
     except Exception:
-        logger.exception("No IM channels configured or channel service failed to start")
+        logger.exception("Failed to initialize checkpointer")
+        yield
 
-    yield
-
-    # Stop channel service on shutdown
-    try:
-        from app.channels.service import stop_channel_service
-
-        await stop_channel_service()
-    except Exception:
-        logger.exception("Failed to stop channel service")
     logger.info("Shutting down API Gateway")
 
 
@@ -183,6 +196,9 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
 
     # Channels API is mounted at /api/channels
     app.include_router(channels.router)
+
+    # Runs API is mounted at /api/threads/{thread_id}/runs
+    app.include_router(runs.router)
 
     @app.get("/health", tags=["health"])
     async def health_check() -> dict:

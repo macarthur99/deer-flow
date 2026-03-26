@@ -66,64 +66,76 @@ make gateway
 ## Project Structure
 
 ```
-backend/src/
-├── agents/                  # Agent system
-│   ├── lead_agent/         # Main agent implementation
-│   │   └── agent.py        # Agent factory and creation
-│   ├── middlewares/        # Agent middlewares
-│   │   ├── thread_data_middleware.py
-│   │   ├── sandbox_middleware.py
-│   │   ├── title_middleware.py
-│   │   ├── uploads_middleware.py
-│   │   ├── view_image_middleware.py
-│   │   └── clarification_middleware.py
-│   └── thread_state.py     # Thread state definition
+backend/
+├── packages/
+│   └── harness/            # deerflow-harness package
+│       ├── pyproject.toml
+│       └── deerflow/       # Import prefix: deerflow.*
+│           ├── agents/                  # Agent system
+│           │   ├── lead_agent/         # Main agent implementation
+│           │   │   └── agent.py        # Agent factory and creation
+│           │   ├── middlewares/        # Agent middlewares
+│           │   │   ├── thread_data_middleware.py
+│           │   │   ├── sandbox_middleware.py
+│           │   │   ├── title_middleware.py
+│           │   │   ├── uploads_middleware.py
+│           │   │   ├── view_image_middleware.py
+│           │   │   └── clarification_middleware.py
+│           │   └── thread_state.py     # Thread state definition
+│           │
+│           ├── sandbox/                 # Sandbox execution
+│           │   ├── __init__.py         # Sandbox interface
+│           │   ├── local/              # Local sandbox provider
+│           │   └── tools.py            # Sandbox tools (bash, file ops)
+│           │
+│           ├── tools/                   # Agent tools
+│           │   └── builtins/           # Built-in tools
+│           │       ├── present_file_tool.py
+│           │       ├── ask_clarification_tool.py
+│           │       └── view_image_tool.py
+│           │
+│           ├── mcp/                     # MCP integration
+│           │   └── client.py           # MCP client management
+│           │
+│           ├── models/                  # Model system
+│           │   └── factory.py          # Model factory
+│           │
+│           ├── skills/                  # Skills system
+│           │   └── loader.py           # Skills loader
+│           │
+│           ├── config/                  # Configuration
+│           │   ├── app_config.py       # Main app config
+│           │   ├── extensions_config.py # Extensions config
+│           │   └── summarization_config.py
+│           │
+│           ├── community/               # Community tools
+│           │   ├── tavily/             # Tavily web search
+│           │   ├── jina_ai/            # Jina web fetch
+│           │   ├── firecrawl/          # Firecrawl scraping
+│           │   └── aio_sandbox/        # Docker sandbox
+│           │
+│           ├── reflection/              # Dynamic loading
+│           │   └── __init__.py         # Module resolution
+│           │
+│           ├── utils/                   # Utilities
+│           │   └── __init__.py
+│           │
+│           └── client.py                # Embedded Python client
 │
-├── gateway/                 # FastAPI Gateway
-│   ├── app.py              # FastAPI application
-│   └── routers/            # Route handlers
-│       ├── models.py       # /api/models endpoints
-│       ├── mcp.py          # /api/mcp endpoints
-│       ├── skills.py       # /api/skills endpoints
-│       ├── artifacts.py    # /api/threads/.../artifacts
-│       └── uploads.py      # /api/threads/.../uploads
-│
-├── sandbox/                 # Sandbox execution
-│   ├── __init__.py         # Sandbox interface
-│   ├── local.py            # Local sandbox provider
-│   └── tools.py            # Sandbox tools (bash, file ops)
-│
-├── tools/                   # Agent tools
-│   └── builtins/           # Built-in tools
-│       ├── present_file_tool.py
-│       ├── ask_clarification_tool.py
-│       └── view_image_tool.py
-│
-├── mcp/                     # MCP integration
-│   └── manager.py          # MCP server management
-│
-├── models/                  # Model system
-│   └── factory.py          # Model factory
-│
-├── skills/                  # Skills system
-│   └── loader.py           # Skills loader
-│
-├── config/                  # Configuration
-│   ├── app_config.py       # Main app config
-│   ├── extensions_config.py # Extensions config
-│   └── summarization_config.py
-│
-├── community/               # Community tools
-│   ├── tavily/             # Tavily web search
-│   ├── jina/               # Jina web fetch
-│   ├── firecrawl/          # Firecrawl scraping
-│   └── aio_sandbox/        # Docker sandbox
-│
-├── reflection/              # Dynamic loading
-│   └── __init__.py         # Module resolution
-│
-└── utils/                   # Utilities
-    └── __init__.py
+└── app/                     # Application layer (import prefix: app.*)
+    ├── gateway/             # FastAPI Gateway
+    │   ├── app.py          # FastAPI application
+    │   └── routers/        # Route handlers
+    │       ├── models.py   # /api/models endpoints
+    │       ├── mcp.py      # /api/mcp endpoints
+    │       ├── skills.py   # /api/skills endpoints
+    │       ├── artifacts.py # /api/threads/.../artifacts
+    │       └── uploads.py  # /api/threads/.../uploads
+    │
+    └── channels/            # IM platform integrations
+        ├── feishu.py
+        ├── slack.py
+        └── telegram.py
 ```
 
 ## Code Style
