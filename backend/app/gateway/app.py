@@ -8,12 +8,14 @@ from app.gateway.config import get_gateway_config
 from app.gateway.routers import (
     agents,
     artifacts,
+    assistants_compat,
     channels,
     mcp,
     memory,
     models,
     skills,
     suggestions,
+    thread_runs,
     threads,
     uploads,
 )
@@ -49,6 +51,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 2. Gateway and LangGraph Server are separate processes with independent caches
     # MCP tools are lazily initialized in LangGraph Server when first needed
 
+    # Initialize LangGraph runtime components (StreamBridge, RunManager, checkpointer)
+    from deerflow.agents.checkpointer.async_provider import make_checkpointer
+    from deerflow.agents.runs import RunManager
+    from deerflow.agents.stream_bridge import make_stream_bridge
+
+    bridge_cm = make_stream_bridge()
+    bridge = await bridge_cm.__aenter__()
+    app.state.stream_bridge = bridge
+
+    ckpt_cm = make_checkpointer()
+    checkpointer = await ckpt_cm.__aenter__()
+    app.state.checkpointer = checkpointer
+
+    app.state.run_manager = RunManager()
+    app.state.store = None
+
+    logger.info("LangGraph runtime initialised (stream_bridge + checkpointer + run_manager)")
+
     # Start IM channel service if any channels are configured
     try:
         from app.channels.service import start_channel_service
@@ -67,6 +87,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await stop_channel_service()
     except Exception:
         logger.exception("Failed to stop channel service")
+
+    # Cleanup LangGraph runtime
+    await bridge_cm.__aexit__(None, None, None)
+    await ckpt_cm.__aexit__(None, None, None)
     logger.info("Shutting down API Gateway")
 
 
@@ -145,6 +169,14 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
                 "description": "Manage IM channel integrations (Feishu, Slack, Telegram)",
             },
             {
+                "name": "assistants-compat",
+                "description": "LangGraph Platform-compatible assistants API (stub)",
+            },
+            {
+                "name": "runs",
+                "description": "LangGraph Platform-compatible runs lifecycle (create, stream, cancel)",
+            },
+            {
                 "name": "health",
                 "description": "Health check and system status endpoints",
             },
@@ -183,6 +215,12 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
 
     # Channels API is mounted at /api/channels
     app.include_router(channels.router)
+
+    # Assistants compatibility API (LangGraph Platform stub)
+    app.include_router(assistants_compat.router)
+
+    # Thread Runs API (LangGraph Platform-compatible runs lifecycle)
+    app.include_router(thread_runs.router)
 
     @app.get("/health", tags=["health"])
     async def health_check() -> dict:
