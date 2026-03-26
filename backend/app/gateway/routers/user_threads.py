@@ -18,12 +18,12 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/threads", tags=["threads"])
+router = APIRouter(prefix="/api/user", tags=["user"])
 logger = logging.getLogger(__name__)
 
 # LangGraph Server is co-located; use the loopback address.
 # Override with LANGGRAPH_INTERNAL_URL env var if needed.
-_LANGGRAPH_URL = os.getenv("LANGGRAPH_INTERNAL_URL", "http://127.0.0.1:8001/ReportCenterService/rest/langgraph")
+_LANGGRAPH_URL = os.getenv("LANGGRAPH_INTERNAL_URL", "http://192.168.82.122:8001/ReportCenterService/rest/langgraph")
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ async def create_thread(body: BaseRequest) -> dict:
         # Prepare request body with metadata containing user_id
         request_body = body.jsonArg or {}
         request_body["metadata"] = {"user_id": str(user_id)}
-
+        print(request_body)
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(f"{_LANGGRAPH_URL}/threads", json=request_body)
             resp.raise_for_status()
