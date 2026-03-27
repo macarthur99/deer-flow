@@ -53,20 +53,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # MCP tools are lazily initialized in LangGraph Server when first needed
 
     # Initialize LangGraph runtime components (StreamBridge, RunManager, checkpointer)
-    from deerflow.agents.checkpointer.async_provider import make_checkpointer
-    from deerflow.agents.runs import RunManager
-    from deerflow.agents.stream_bridge import make_stream_bridge
+    from app.gateway.deps import init_checkpointer, init_run_manager, init_store, init_stream_bridge
 
-    bridge_cm = make_stream_bridge()
-    bridge = await bridge_cm.__aenter__()
-    app.state.stream_bridge = bridge
-
-    ckpt_cm = make_checkpointer()
-    checkpointer = await ckpt_cm.__aenter__()
-    app.state.checkpointer = checkpointer
-
-    app.state.run_manager = RunManager()
-    app.state.store = None
+    await init_stream_bridge(app)
+    await init_checkpointer(app)
+    init_run_manager(app)
+    init_store(app)
 
     logger.info("LangGraph runtime initialised (stream_bridge + checkpointer + run_manager)")
 

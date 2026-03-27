@@ -13,11 +13,9 @@ import uuid
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
+from app.gateway.deps import get_checkpointer, get_run_manager, get_stream_bridge
 from app.gateway.routers.thread_runs import (
     RunCreateRequest,
-    _get_bridge,
-    _get_checkpointer,
-    _get_run_manager,
     _sse_consumer,
     _start_run,
 )
@@ -31,8 +29,8 @@ router = APIRouter(prefix="/api/runs", tags=["runs"])
 async def stateless_stream(body: RunCreateRequest, request: Request) -> StreamingResponse:
     """Create a run on a temporary thread and stream events via SSE."""
     thread_id = str(uuid.uuid4())
-    bridge = _get_bridge(request)
-    run_mgr = _get_run_manager(request)
+    bridge = get_stream_bridge(request)
+    run_mgr = get_run_manager(request)
     record = await _start_run(body, thread_id, request)
 
     return StreamingResponse(
@@ -58,7 +56,7 @@ async def stateless_wait(body: RunCreateRequest, request: Request) -> dict:
         except asyncio.CancelledError:
             pass
 
-    checkpointer = _get_checkpointer(request)
+    checkpointer = get_checkpointer(request)
     config = {"configurable": {"thread_id": thread_id}}
     try:
         checkpoint_tuple = await checkpointer.aget_tuple(config)

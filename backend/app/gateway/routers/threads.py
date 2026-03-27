@@ -21,6 +21,8 @@ from pydantic import BaseModel, Field
 
 from deerflow.config.paths import Paths, get_paths
 
+from app.gateway.deps import get_checkpointer
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/threads", tags=["threads"])
 
@@ -185,13 +187,6 @@ def _delete_thread_data(thread_id: str, paths: Paths | None = None) -> ThreadDel
     return ThreadDeleteResponse(success=True, message=f"Deleted local thread data for {thread_id}")
 
 
-def _get_checkpointer(request: Request):
-    """Retrieve checkpointer from app state, raising 503 if absent."""
-    checkpointer = getattr(request.app.state, "checkpointer", None)
-    if checkpointer is None:
-        raise HTTPException(status_code=503, detail="Checkpointer not available")
-    return checkpointer
-
 
 def _derive_thread_status(checkpoint_tuple) -> str:
     """Derive thread status from checkpoint metadata."""
@@ -227,7 +222,7 @@ async def delete_thread_data(thread_id: str, request: Request) -> ThreadDeleteRe
     # Clean local filesystem
     response = _delete_thread_data(thread_id)
 
-    # Also clean checkpoints if available
+    # Also clean checkpoints if available (best-effort, no 503 if absent)
     checkpointer = getattr(request.app.state, "checkpointer", None)
     if checkpointer is not None:
         try:
@@ -243,7 +238,7 @@ async def delete_thread_data(thread_id: str, request: Request) -> ThreadDeleteRe
 @router.post("", response_model=ThreadResponse)
 async def create_thread(body: ThreadCreateRequest, request: Request) -> ThreadResponse:
     """Create a new thread with an empty checkpoint."""
-    checkpointer = _get_checkpointer(request)
+    checkpointer = get_checkpointer(request)
     thread_id = body.thread_id or str(uuid.uuid4())
     now = time.time()
 
@@ -298,7 +293,7 @@ async def create_thread(body: ThreadCreateRequest, request: Request) -> ThreadRe
 @router.post("/search", response_model=list[ThreadResponse])
 async def search_threads(body: ThreadSearchRequest, request: Request) -> list[ThreadResponse]:
     """Search threads by iterating checkpoints and deduplicating by thread_id."""
-    checkpointer = _get_checkpointer(request)
+    checkpointer = get_checkpointer(request)
 
     seen: dict[str, ThreadResponse] = {}
     try:
@@ -352,7 +347,7 @@ async def search_threads(body: ThreadSearchRequest, request: Request) -> list[Th
 @router.patch("/{thread_id}", response_model=ThreadResponse)
 async def patch_thread(thread_id: str, body: ThreadPatchRequest, request: Request) -> ThreadResponse:
     """Update thread metadata."""
-    checkpointer = _get_checkpointer(request)
+    checkpointer = get_checkpointer(request)
     config = {"configurable": {"thread_id": thread_id, "checkpoint_ns": ""}}
 
     try:
@@ -389,7 +384,7 @@ async def patch_thread(thread_id: str, body: ThreadPatchRequest, request: Reques
 @router.get("/{thread_id}", response_model=ThreadResponse)
 async def get_thread(thread_id: str, request: Request) -> ThreadResponse:
     """Get thread info derived from its latest checkpoint."""
-    checkpointer = _get_checkpointer(request)
+    checkpointer = get_checkpointer(request)
 
     config = {"configurable": {"thread_id": thread_id, "checkpoint_ns": ""}}
     try:
@@ -421,7 +416,7 @@ async def get_thread_state(thread_id: str, request: Request) -> ThreadStateRespo
     Channel values are serialized to ensure LangChain message objects
     are converted to JSON-safe dicts.
     """
-    checkpointer = _get_checkpointer(request)
+    checkpointer = get_checkpointer(request)
 
     config = {"configurable": {"thread_id": thread_id, "checkpoint_ns": ""}}
     try:
@@ -466,7 +461,7 @@ async def get_thread_state(thread_id: str, request: Request) -> ThreadStateRespo
 @router.post("/{thread_id}/state", response_model=ThreadStateResponse)
 async def update_thread_state(thread_id: str, body: ThreadStateUpdateRequest, request: Request) -> ThreadStateResponse:
     """Update thread state (e.g. for human-in-the-loop resume)."""
-    checkpointer = _get_checkpointer(request)
+    checkpointer = get_checkpointer(request)
 
     config: dict[str, Any] = {"configurable": {"thread_id": thread_id}}
     if body.checkpoint_id:
@@ -517,7 +512,7 @@ async def update_thread_state(thread_id: str, body: ThreadStateUpdateRequest, re
 @router.post("/{thread_id}/history", response_model=list[HistoryEntry])
 async def get_thread_history(thread_id: str, body: ThreadHistoryRequest, request: Request) -> list[HistoryEntry]:
     """Get checkpoint history for a thread."""
-    checkpointer = _get_checkpointer(request)
+    checkpointer = get_checkpointer(request)
 
     config: dict[str, Any] = {"configurable": {"thread_id": thread_id}}
     if body.before:
