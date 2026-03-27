@@ -99,11 +99,13 @@ def _normalize_stream_modes(raw: list[str] | str | None) -> list[str]:
 
     Default matches what ``useStream`` expects: values + messages-tuple.
     """
+    # When stream_mode is omitted or empty, default to both values and messages-tuple
+    # to match the expectations of the LangGraph `useStream` hook.
     if raw is None:
-        return ["values"]
+        return ["values", "messages-tuple"]
     if isinstance(raw, str):
         return [raw]
-    return raw if raw else ["values"]
+    return raw if raw else ["values", "messages-tuple"]
 
 
 def _normalize_input(raw_input: dict[str, Any] | None) -> dict[str, Any]:
