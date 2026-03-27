@@ -19,10 +19,11 @@ import asyncio
 import logging
 from typing import Any, Literal
 
-from .manager import RunManager, RunRecord
-from .schemas import RunStatus
 from deerflow.runtime.serialization import serialize
 from deerflow.runtime.stream_bridge import StreamBridge
+
+from .manager import RunManager, RunRecord
+from .schemas import RunStatus
 
 logger = logging.getLogger(__name__)
 

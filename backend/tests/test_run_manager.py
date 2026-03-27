@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from deerflow.agents.runs import RunManager, RunStatus
+from deerflow.runtime import RunManager, RunStatus
 
 ISO_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
 

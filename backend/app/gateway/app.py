@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.gateway.config import get_gateway_config
+from app.gateway.deps import langgraph_runtime
 from app.gateway.routers import (
     agents,
     artifacts,
@@ -47,18 +48,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     config = get_gateway_config()
     logger.info(f"Starting API Gateway on {config.host}:{config.port}")
 
-    # NOTE: MCP tools initialization is NOT done here because:
-    # 1. Gateway doesn't use MCP tools - they are used by Agents in the LangGraph Server
-    # 2. Gateway and LangGraph Server are separate processes with independent caches
-    # MCP tools are lazily initialized in LangGraph Server when first needed
-
     # Initialize LangGraph runtime components (StreamBridge, RunManager, checkpointer)
-    from app.gateway.deps import init_checkpointer, init_run_manager, init_store, init_stream_bridge
-
-    await init_stream_bridge(app)
-    await init_checkpointer(app)
-    init_run_manager(app)
-    init_store(app)
+    async with langgraph_runtime(app):
+        logger.info("LangGraph runtime initialised")
+        yield
 
     logger.info("LangGraph runtime initialised (stream_bridge + checkpointer + run_manager)")
 

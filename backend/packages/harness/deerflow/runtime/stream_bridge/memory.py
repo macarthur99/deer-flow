@@ -8,7 +8,7 @@ import time
 from collections.abc import AsyncIterator
 from typing import Any
 
-from deerflow.agents.stream_bridge.base import END_SENTINEL, HEARTBEAT_SENTINEL, StreamBridge, StreamEvent
+from .base import END_SENTINEL, HEARTBEAT_SENTINEL, StreamBridge, StreamEvent
 
 logger = logging.getLogger(__name__)
 

@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 
 from app.gateway.deps import get_checkpointer, get_run_manager, get_stream_bridge
 from app.gateway.routers.thread_runs import RunCreateRequest
-from app.gateway.services import start_run, sse_consumer
+from app.gateway.services import sse_consumer, start_run
 from deerflow.runtime import serialize_channel_values
 
 logger = logging.getLogger(__name__)

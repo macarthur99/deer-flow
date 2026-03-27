@@ -19,10 +19,9 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
-from deerflow.runtime import RunRecord, RunStatus, serialize_channel_values
-
 from app.gateway.deps import get_checkpointer, get_run_manager, get_stream_bridge
-from app.gateway.services import start_run, sse_consumer
+from app.gateway.services import sse_consumer, start_run
+from deerflow.runtime import RunRecord, serialize_channel_values
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/threads", tags=["runs"])

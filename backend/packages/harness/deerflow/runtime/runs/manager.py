@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from deerflow.agents.runs.schemas import DisconnectMode, RunStatus
+from .schemas import DisconnectMode, RunStatus
 
 logger = logging.getLogger(__name__)
 

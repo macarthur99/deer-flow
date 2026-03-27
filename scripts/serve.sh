@@ -95,7 +95,7 @@ cleanup() {
     trap - INT TERM
     echo ""
     echo "Shutting down services..."
-    if [ "${SKIP_LANGGRAPH_SERVER:-1}" != "1" ]; then
+    if [ "${SKIP_LANGGRAPH_SERVER:-0}" != "1" ]; then
         pkill -f "langgraph dev" 2>/dev/null || true
     fi
     pkill -f "uvicorn app.gateway.app:app" 2>/dev/null || true
@@ -130,7 +130,7 @@ else
     GATEWAY_EXTRA_FLAGS=""
 fi
 
-if [ "${SKIP_LANGGRAPH_SERVER:-1}" != "1" ]; then
+if [ "${SKIP_LANGGRAPH_SERVER:-0}" != "1" ]; then
     echo "Starting LangGraph server..."
     # Read log_level from config.yaml, fallback to env var, then to "info"
     CONFIG_LOG_LEVEL=$(grep -m1 '^log_level:' config.yaml 2>/dev/null | awk '{print $2}' | tr -d ' ')
@@ -147,7 +147,8 @@ if [ "${SKIP_LANGGRAPH_SERVER:-1}" != "1" ]; then
     }
     echo "✓ LangGraph server started on localhost:2024"
 else
-    echo "⏩ Skipping LangGraph server (Gateway handles LangGraph API)"
+    echo "⏩ Skipping LangGraph server (SKIP_LANGGRAPH_SERVER=1)"
+    echo "   Use /api/langgraph-compat/* via Gateway instead"
 fi
 
 echo "Starting Gateway API..."
@@ -196,10 +197,15 @@ echo "=========================================="
 echo ""
 echo "  🌐 Application: http://localhost:2026"
 echo "  📡 API Gateway: http://localhost:2026/api/*"
-if [ "${SKIP_LANGGRAPH_SERVER:-1}" = "1" ]; then
-    echo "  🤖 LangGraph API: http://localhost:2026/api/langgraph/* (served by Gateway)"
+if [ "${SKIP_LANGGRAPH_SERVER:-0}" = "1" ]; then
+    echo "  🤖 LangGraph: skipped (SKIP_LANGGRAPH_SERVER=1)"
 else
-    echo "  🤖 LangGraph:   http://localhost:2026/api/langgraph/* (served by langgraph dev)"
+    echo "  🤖 LangGraph: http://localhost:2026/api/langgraph/* (served by langgraph dev)"
+fi
+echo "  🧪 LangGraph Compat (experimental): http://localhost:2026/api/langgraph-compat/* (served by Gateway)"
+if [ "${SKIP_LANGGRAPH_SERVER:-0}" = "1" ]; then
+    echo ""
+    echo "  💡 Set NEXT_PUBLIC_LANGGRAPH_BASE_URL=/api/langgraph-compat in frontend/.env.local"
 fi
 echo ""
 echo "  📋 Logs:"
