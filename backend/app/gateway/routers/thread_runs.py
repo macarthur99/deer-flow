@@ -12,20 +12,17 @@ works without modification.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import time
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
-from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
-from deerflow.runtime import ConflictError, DisconnectMode, END_SENTINEL, HEARTBEAT_SENTINEL, RunManager, RunRecord, RunStatus, StreamBridge, UnsupportedStrategyError, run_agent
+from deerflow.runtime import RunRecord, RunStatus, serialize_channel_values
 
-from app.gateway.deps import get_checkpointer, get_run_manager, get_store, get_stream_bridge
-from deerflow.runtime import serialize_channel_values
+from app.gateway.deps import get_checkpointer, get_run_manager, get_stream_bridge
+from app.gateway.services import start_run, sse_consumer
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/threads", tags=["runs"])
@@ -75,66 +72,6 @@ class RunResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-
-
-def _normalize_stream_modes(raw: list[str] | str | None) -> list[str]:
-    """Normalize the stream_mode parameter to a list.
-
-    Default matches what ``useStream`` expects: values + messages-tuple.
-    """
-    if raw is None:
-        return ["values"]
-    if isinstance(raw, str):
-        return [raw]
-    return raw if raw else ["values"]
-
-
-def _normalize_input(raw_input: dict[str, Any] | None) -> dict[str, Any]:
-    """Convert LangGraph Platform input format to LangChain state dict."""
-    if raw_input is None:
-        return {}
-    messages = raw_input.get("messages")
-    if messages and isinstance(messages, list):
-        converted = []
-        for msg in messages:
-            if isinstance(msg, dict):
-                role = msg.get("role", msg.get("type", "user"))
-                content = msg.get("content", "")
-                if role in ("user", "human"):
-                    converted.append(HumanMessage(content=content))
-                else:
-                    # TODO: handle other message types (system, ai, tool)
-                    converted.append(HumanMessage(content=content))
-            else:
-                converted.append(msg)
-        return {**raw_input, "messages": converted}
-    return raw_input
-
-
-def _resolve_agent_factory(assistant_id: str | None):
-    """Resolve the agent factory callable from config."""
-    from deerflow.agents.lead_agent.agent import make_lead_agent
-
-    if assistant_id and assistant_id != "lead_agent":
-        logger.info("assistant_id=%s requested; falling back to lead_agent", assistant_id)
-    return make_lead_agent
-
-
-def _build_run_config(thread_id: str, request_config: dict[str, Any] | None, metadata: dict[str, Any] | None) -> dict[str, Any]:
-    """Build a RunnableConfig dict for the agent."""
-    configurable = {"thread_id": thread_id}
-    if request_config:
-        configurable.update(request_config.get("configurable", {}))
-    config: dict[str, Any] = {"configurable": configurable, "recursion_limit": 100}
-    if request_config:
-        for k, v in request_config.items():
-            if k != "configurable":
-                config[k] = v
-    if metadata:
-        config.setdefault("metadata", {}).update(metadata)
-    return config
-
-
 def _record_to_response(record: RunRecord) -> RunResponse:
     return RunResponse(
         run_id=record.run_id,
@@ -149,113 +86,6 @@ def _record_to_response(record: RunRecord) -> RunResponse:
     )
 
 
-def _format_sse(event: str, data: Any, *, event_id: str | None = None) -> str:
-    """Format a single SSE frame.
-
-    Field order: ``event:`` → ``data:`` → ``id:`` (optional) → blank line.
-    This matches the LangGraph Platform wire format consumed by the
-    ``useStream`` React hook and the Python ``langgraph-sdk`` SSE decoder.
-    """
-    payload = json.dumps(data, default=str, ensure_ascii=False)
-    parts = [f"event: {event}", f"data: {payload}"]
-    if event_id:
-        parts.append(f"id: {event_id}")
-    parts.append("")
-    parts.append("")
-    return "\n".join(parts)
-
-
-def _make_event_id() -> str:
-    """Generate a timestamp-based SSE event ID."""
-    return f"{int(time.time() * 1000)}"
-
-
-async def _start_run(
-    body: RunCreateRequest,
-    thread_id: str,
-    request: Request,
-) -> RunRecord:
-    """Shared logic: create a RunRecord and launch the background task."""
-    bridge = get_stream_bridge(request)
-    run_mgr = get_run_manager(request)
-    checkpointer = get_checkpointer(request)
-    store = get_store(request)
-
-    disconnect = DisconnectMode.cancel if body.on_disconnect == "cancel" else DisconnectMode.continue_
-
-    try:
-        record = await run_mgr.create_or_reject(
-            thread_id,
-            body.assistant_id,
-            on_disconnect=disconnect,
-            metadata=body.metadata or {},
-            kwargs={"input": body.input, "config": body.config},
-            multitask_strategy=body.multitask_strategy,
-        )
-    except ConflictError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except UnsupportedStrategyError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
-
-    agent_factory = _resolve_agent_factory(body.assistant_id)
-    graph_input = _normalize_input(body.input)
-    config = _build_run_config(thread_id, body.config, body.metadata)
-    stream_modes = _normalize_stream_modes(body.stream_mode)
-
-    task = asyncio.create_task(
-        run_agent(
-            bridge,
-            run_mgr,
-            record,
-            checkpointer=checkpointer,
-            store=store,
-            agent_factory=agent_factory,
-            graph_input=graph_input,
-            config=config,
-            stream_modes=stream_modes,
-            stream_subgraphs=body.stream_subgraphs,
-            interrupt_before=body.interrupt_before,
-            interrupt_after=body.interrupt_after,
-        )
-    )
-    record.task = task
-    return record
-
-
-async def _sse_consumer(
-    bridge: StreamBridge,
-    record: RunRecord,
-    request: Request,
-    run_mgr: RunManager,
-):
-    """Async generator that yields SSE frames from the bridge.
-
-    The ``finally`` block implements ``on_disconnect`` semantics:
-    - ``cancel``: abort the background task on client disconnect.
-    - ``continue``: let the task run; events are discarded.
-    """
-    try:
-        async for entry in bridge.subscribe(record.run_id):
-            if await request.is_disconnected():
-                break
-
-            if entry is HEARTBEAT_SENTINEL:
-                yield ": heartbeat\n\n"
-                continue
-
-            if entry is END_SENTINEL:
-                # LangGraph Platform end event: data is empty (null)
-                yield _format_sse("end", None, event_id=entry.id or None)
-                return
-
-            yield _format_sse(entry.event, entry.data, event_id=entry.id or None)
-
-    finally:
-        if record.status in (RunStatus.pending, RunStatus.running):
-            if record.on_disconnect == DisconnectMode.cancel:
-                await run_mgr.cancel(record.run_id)
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -264,7 +94,7 @@ async def _sse_consumer(
 @router.post("/{thread_id}/runs", response_model=RunResponse)
 async def create_run(thread_id: str, body: RunCreateRequest, request: Request) -> RunResponse:
     """Create a background run (returns immediately)."""
-    record = await _start_run(body, thread_id, request)
+    record = await start_run(body, thread_id, request)
     return _record_to_response(record)
 
 
@@ -278,10 +108,10 @@ async def stream_run(thread_id: str, body: RunCreateRequest, request: Request) -
     """
     bridge = get_stream_bridge(request)
     run_mgr = get_run_manager(request)
-    record = await _start_run(body, thread_id, request)
+    record = await start_run(body, thread_id, request)
 
     return StreamingResponse(
-        _sse_consumer(bridge, record, request, run_mgr),
+        sse_consumer(bridge, record, request, run_mgr),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -297,7 +127,7 @@ async def stream_run(thread_id: str, body: RunCreateRequest, request: Request) -
 @router.post("/{thread_id}/runs/wait", response_model=dict)
 async def wait_run(thread_id: str, body: RunCreateRequest, request: Request) -> dict:
     """Create a run and block until it completes, returning the final state."""
-    record = await _start_run(body, thread_id, request)
+    record = await start_run(body, thread_id, request)
 
     if record.task is not None:
         try:
@@ -384,7 +214,7 @@ async def join_run(thread_id: str, run_id: str, request: Request) -> StreamingRe
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
 
     return StreamingResponse(
-        _sse_consumer(bridge, record, request, run_mgr),
+        sse_consumer(bridge, record, request, run_mgr),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
