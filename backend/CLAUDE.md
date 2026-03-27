@@ -213,6 +213,12 @@ FastAPI application on port 8001 with health check at `GET /health`.
 
 Proxied through nginx: `/api/langgraph/*` → LangGraph, all other `/api/*` → Gateway.
 
+**CORS Configuration**:
+- Enabled by default for `http://localhost:3000`
+- Configure via `CORS_ORIGINS` environment variable (comma-separated list)
+- Example: `CORS_ORIGINS=http://localhost:3000,https://app.example.com`
+- Allows credentials, all methods, and all headers
+
 ### Sandbox System (`packages/harness/deerflow/sandbox/`)
 
 **Interface**: Abstract `Sandbox` with `execute_command`, `read_file`, `write_file`, `list_dir`

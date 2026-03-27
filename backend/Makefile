@@ -1,14 +1,14 @@
 install:
-	uv sync
+	python -m pip install -r requirements-dev.txt
 
 dev:
 	uv run langgraph dev --no-browser --allow-blocking --no-reload
 
 gateway:
-	PYTHONPATH=. uv run uvicorn app.gateway.app:app --host 0.0.0.0 --port 8001
+	PYTHONPATH=. python -m uvicorn app.gateway.app:app --host 0.0.0.0 --port 8001
 
 test:
-	PYTHONPATH=. uv run pytest tests/ -v
+	PYTHONPATH=. python -m pytest tests/ -v
 
 lint:
 	uvx ruff check .
