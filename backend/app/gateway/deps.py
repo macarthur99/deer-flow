@@ -1,53 +1,39 @@
 """Centralized accessors for singleton objects stored on ``app.state``.
 
-All reads **and writes** to the four singletons on ``app.state`` should go
-through this module so the coupling is in one place.
+**Getters** (used by routers): raise 503 when a required dependency is
+missing, except ``get_store`` which returns ``None``.
 
-* **Initializers** (used by ``app.py`` at startup): create the singleton and
-  attach it to ``app.state``.
-* **Getters** (used by routers): raise 503 when a required dependency is
-  missing, except ``get_store`` which returns ``None``.
+Initialization is handled directly in ``app.py`` via :class:`AsyncExitStack`.
 """
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+from contextlib import AsyncExitStack, asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 
-from deerflow.agents.runs import RunManager
-from deerflow.agents.stream_bridge import StreamBridge
+from deerflow.runtime import RunManager, StreamBridge
 
 
-# ---------------------------------------------------------------------------
-# Initializers – called once during app startup
-# ---------------------------------------------------------------------------
+@asynccontextmanager
+async def langgraph_runtime(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Bootstrap and tear down all LangGraph runtime singletons.
 
+    Usage in ``app.py``::
 
-async def init_stream_bridge(app: FastAPI) -> None:
-    """Create the :class:`StreamBridge` and store it on ``app.state``."""
-    from deerflow.agents.stream_bridge import make_stream_bridge
-
-    bridge_cm = make_stream_bridge()
-    bridge = await bridge_cm.__aenter__()
-    app.state.stream_bridge = bridge
-
-
-async def init_checkpointer(app: FastAPI) -> None:
-    """Create the async checkpointer and store it on ``app.state``."""
+        async with langgraph_runtime(app):
+            yield
+    """
     from deerflow.agents.checkpointer.async_provider import make_checkpointer
+    from deerflow.runtime import make_stream_bridge
 
-    ckpt_cm = make_checkpointer()
-    checkpointer = await ckpt_cm.__aenter__()
-    app.state.checkpointer = checkpointer
-
-
-def init_run_manager(app: FastAPI) -> None:
-    """Create a :class:`RunManager` and store it on ``app.state``."""
-    app.state.run_manager = RunManager()
-
-
-def init_store(app: FastAPI) -> None:
-    """Initialize the store slot on ``app.state`` (currently ``None``)."""
-    app.state.store = None
+    async with AsyncExitStack() as stack:
+        app.state.stream_bridge = await stack.enter_async_context(make_stream_bridge())
+        app.state.checkpointer = await stack.enter_async_context(make_checkpointer())
+        app.state.run_manager = RunManager()
+        app.state.store = None
+        yield
 
 
 # ---------------------------------------------------------------------------

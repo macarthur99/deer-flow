@@ -5,8 +5,7 @@ import re
 
 import pytest
 
-from deerflow.agents.stream_bridge import END_SENTINEL, HEARTBEAT_SENTINEL, make_stream_bridge
-from deerflow.agents.stream_bridge.memory import MemoryStreamBridge
+from deerflow.runtime import END_SENTINEL, HEARTBEAT_SENTINEL, MemoryStreamBridge, make_stream_bridge
 
 # ---------------------------------------------------------------------------
 # Unit tests for MemoryStreamBridge

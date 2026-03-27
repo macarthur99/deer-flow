@@ -10,13 +10,15 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import time
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import HTTPException, Request
 from langchain_core.messages import HumanMessage
 
+from app.gateway.deps import get_checkpointer, get_run_manager, get_store, get_stream_bridge
 from deerflow.runtime import (
+    END_SENTINEL,
+    HEARTBEAT_SENTINEL,
     ConflictError,
     DisconnectMode,
     RunManager,
@@ -24,12 +26,8 @@ from deerflow.runtime import (
     RunStatus,
     StreamBridge,
     UnsupportedStrategyError,
-    END_SENTINEL,
-    HEARTBEAT_SENTINEL,
     run_agent,
 )
-
-from app.gateway.deps import get_checkpointer, get_run_manager, get_store, get_stream_bridge
 
 logger = logging.getLogger(__name__)
 

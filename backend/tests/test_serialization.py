@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class _FakePydanticV2:
     """Object with model_dump (Pydantic v2)."""

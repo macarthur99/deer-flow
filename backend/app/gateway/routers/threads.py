@@ -4,9 +4,10 @@ Combines the existing thread-local filesystem cleanup with LangGraph
 Platform-compatible thread management backed by the checkpointer.
 
 Channel values returned in state responses are serialized through
-:func:`_serialize_channel_values` to ensure LangChain message objects
-are converted to JSON-safe dicts matching the LangGraph Platform wire
-format expected by the ``useStream`` React hook.
+:func:`deerflow.runtime.serialization.serialize_channel_values` to
+ensure LangChain message objects are converted to JSON-safe dicts
+matching the LangGraph Platform wire format expected by the
+``useStream`` React hook.
 """
 
 from __future__ import annotations
@@ -19,10 +20,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app.gateway.deps import get_checkpointer
 from deerflow.config.paths import Paths, get_paths
 from deerflow.runtime import serialize_channel_values
-
-from app.gateway.deps import get_checkpointer
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/threads", tags=["threads"])

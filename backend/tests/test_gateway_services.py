@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 
 def test_format_sse_basic():
     from app.gateway.services import format_sse

@@ -17,8 +17,9 @@ import contextlib
 import logging
 from collections.abc import AsyncIterator
 
-from deerflow.agents.stream_bridge.base import StreamBridge
 from deerflow.config.stream_bridge_config import get_stream_bridge_config
+
+from .base import StreamBridge
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ async def make_stream_bridge(config=None) -> AsyncIterator[StreamBridge]:
         config = get_stream_bridge_config()
 
     if config is None or config.type == "memory":
-        from deerflow.agents.stream_bridge.memory import MemoryStreamBridge
+        from deerflow.runtime.stream_bridge.memory import MemoryStreamBridge
 
         maxsize = config.queue_maxsize if config is not None else 256
         bridge = MemoryStreamBridge(queue_maxsize=maxsize)
