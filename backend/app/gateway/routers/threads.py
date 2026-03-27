@@ -54,7 +54,6 @@ class ThreadCreateRequest(BaseModel):
 
     thread_id: str | None = Field(default=None, description="Optional thread ID (auto-generated if omitted)")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Initial metadata")
-    if_exists: str | None = Field(default=None, description="What to do if thread already exists")
 
 
 class ThreadSearchRequest(BaseModel):
