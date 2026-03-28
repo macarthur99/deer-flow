@@ -384,6 +384,10 @@ export function useThreadStream({
                       : undefined),
               thread_id: threadId,
             },
+            metadata: {
+              user_id: "123",
+              source: "api",
+            },
           },
         );
         void queryClient.invalidateQueries({ queryKey: ["threads", "search"] });

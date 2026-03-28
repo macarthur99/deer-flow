@@ -1,3 +1,4 @@
+import operator
 from typing import Annotated, NotRequired, TypedDict
 
 from langchain.agents import AgentState
@@ -53,3 +54,4 @@ class ThreadState(AgentState):
     todos: NotRequired[list | None]
     uploaded_files: NotRequired[list[dict] | None]
     viewed_images: Annotated[dict[str, ViewedImageData], merge_viewed_images]  # image_path -> {base64, mime_type}
+    citations: Annotated[list[str], operator.add]  # List of URLs
