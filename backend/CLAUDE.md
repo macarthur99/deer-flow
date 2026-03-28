@@ -165,6 +165,27 @@ Middlewares execute in strict order in `packages/harness/deerflow/agents/lead_ag
 11. **SubagentLimitMiddleware** - Truncates excess `task` tool calls from model response to enforce `MAX_CONCURRENT_SUBAGENTS` limit (optional, if subagent_enabled)
 12. **ClarificationMiddleware** - Intercepts `ask_clarification` tool calls, interrupts via `Command(goto=END)` (must be last)
 
+### Checkpointer System (`packages/harness/deerflow/agents/checkpointer/`)
+
+**Providers**:
+- `async_provider.py` - Async context manager for FastAPI Gateway
+- `provider.py` - Sync singleton for LangGraph CLI and tests
+- `resilient_checkpointer.py` - Retry wrapper for PostgreSQL auto-reconnection
+
+**Backends**:
+- `memory` - In-memory (lost on restart)
+- `sqlite` - File-based (default)
+- `postgres` - PostgreSQL (production, with auto-reconnection)
+
+**Auto-Reconnection** (PostgreSQL only):
+- Wraps `AsyncPostgresSaver` with `ResilientCheckpointer`
+- Retries on `psycopg.OperationalError` and `DatabaseError`
+- 3 attempts with exponential backoff (1s, 2s, 4s)
+- Logs only final failure or successful recovery
+- Zero overhead on success path
+
+**Operations wrapped**: `aget_tuple`, `aput`, `alist`, `adelete`
+
 ### Configuration System
 
 **Main Configuration** (`config.yaml`):

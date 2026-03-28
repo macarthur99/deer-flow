@@ -73,9 +73,11 @@ async def _async_checkpointer(config) -> AsyncIterator[Checkpointer]:
         if not config.connection_string:
             raise ValueError(POSTGRES_CONN_REQUIRED)
 
+        from deerflow.agents.checkpointer.resilient_checkpointer import ResilientCheckpointer
+
         async with AsyncPostgresSaver.from_conn_string(config.connection_string) as saver:
             await saver.setup()
-            yield saver
+            yield ResilientCheckpointer(saver)
         return
 
     raise ValueError(f"Unknown checkpointer type: {config.type!r}")

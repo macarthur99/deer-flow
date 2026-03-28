@@ -59,6 +59,8 @@ class UploadsMiddleware(AgentMiddleware[UploadsMiddlewareState]):
                 size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb / 1024:.1f} MB"
                 lines.append(f"- {file['filename']} ({size_str})")
                 lines.append(f"  Path: {file['path']}")
+                if "fileid" in file:
+                    lines.append(f"  FileID: {file['fileid']}")
                 lines.append("")
         else:
             lines.append("(empty)")
@@ -71,6 +73,8 @@ class UploadsMiddleware(AgentMiddleware[UploadsMiddlewareState]):
                 size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb / 1024:.1f} MB"
                 lines.append(f"- {file['filename']} ({size_str})")
                 lines.append(f"  Path: {file['path']}")
+                if "fileid" in file:
+                    lines.append(f"  FileID: {file['fileid']}")
                 lines.append("")
 
         lines.append("You can read these files using the `read_file` tool with the paths shown above.")
@@ -106,14 +110,16 @@ class UploadsMiddleware(AgentMiddleware[UploadsMiddlewareState]):
                 continue
             if uploads_dir is not None and not (uploads_dir / filename).is_file():
                 continue
-            files.append(
-                {
-                    "filename": filename,
-                    "size": int(f.get("size") or 0),
-                    "path": f"/mnt/user-data/uploads/{filename}",
-                    "extension": Path(filename).suffix,
-                }
-            )
+            file_info = {
+                "filename": filename,
+                "size": int(f.get("size") or 0),
+                "path": f"/mnt/user-data/uploads/{filename}",
+                "extension": Path(filename).suffix,
+            }
+            # Extract fileid if present (for citation support)
+            if "fileid" in f:
+                file_info["fileid"] = f["fileid"]
+            files.append(file_info)
         return files if files else None
 
     @override

@@ -260,6 +260,19 @@ def _build_middlewares(config: RunnableConfig, model_name: str | None, agent_nam
     # LoopDetectionMiddleware — detect and break repetitive tool call loops
     middlewares.append(LoopDetectionMiddleware())
 
+    # CitationVerificationMiddleware — verify citation completeness
+    citation_config = get_app_config().citation_verification
+    if citation_config.enabled and citation_config.strictness != "off":
+        from deerflow.agents.middlewares.citation_verification_middleware import CitationVerificationMiddleware
+
+        middlewares.append(
+            CitationVerificationMiddleware(
+                strictness=citation_config.strictness,
+                long_text_threshold=citation_config.long_text_threshold,
+                tracked_tools=citation_config.tracked_tools,
+            )
+        )
+
     # ClarificationMiddleware should always be last
     middlewares.append(ClarificationMiddleware())
     return middlewares

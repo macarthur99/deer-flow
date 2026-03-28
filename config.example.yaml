@@ -237,6 +237,11 @@ tools:
     use: deerflow.community.ddg_search.tools:web_search_tool
     max_results: 5
 
+  - name: web_search
+    group: web
+    use: deerflow.community.internal_search.tools:web_search_tool
+    base_url: http://app-container-master:11010/ProfitReorganizeService/rest/ReportMaterialService/searchMaterial
+    top_k: 20
   # Web search tool (requires Tavily API key)
   # - name: web_search
   #   group: web
@@ -251,29 +256,7 @@ tools:
   #   # Used to limit the scope of search results, only returns content within the specified time range. Set to -1 to disable time filtering
   #   search_time_range: 10
 
-  # Web fetch tool (uses Jina AI reader)
-  - name: web_fetch
-    group: web
-    use: deerflow.community.jina_ai.tools:web_fetch_tool
-    timeout: 10
 
-  # Web fetch tool (uses InfoQuest)
-  # - name: web_fetch
-  #   group: web
-  #   use: deerflow.community.infoquest.tools:web_fetch_tool
-  #   # Overall timeout for the entire crawling process (in seconds). Set to positive value to enable, -1 to disable
-  #   timeout: 10
-  #   # Waiting time after page loading (in seconds). Set to positive value to enable, -1 to disable
-  #   fetch_time: 10
-  #   # Timeout for navigating to the page (in seconds). Set to positive value to enable, -1 to disable
-  #   navigation_timeout: 30
-
-  # Image search tool (uses DuckDuckGo)
-  # Use this to find reference images before image generation
-  - name: image_search
-    group: web
-    use: deerflow.community.image_search.tools:image_search_tool
-    max_results: 5
 
   # Image search tool (uses InfoQuest)
   # - name: image_search
@@ -595,6 +578,21 @@ checkpointer:
 #           context:
 #             thinking_enabled: true
 #             subagent_enabled: true
+
+# ============================================================================
+# Citation Verification Configuration
+# ============================================================================
+# Verify that AI responses cite all sources retrieved from web_search/web_fetch.
+# When enabled, tracks URLs from web tools and reminds the agent to add citations
+# for any uncited sources. Useful for academic writing and professional reports.
+citation_verification:
+  enabled: false  # Enable citation verification (default: false)
+  strictness: warn  # Verification level: off | warn | strict
+  long_text_threshold: 1000  # Character count for enhanced reminders
+  tracked_tools:  # Tools to track for citation verification
+    - web_search  # Tracks 'fileId' field from internal_search
+    - web_fetch
+    - jina_fetch
 
 # ============================================================================
 # Guardrails Configuration

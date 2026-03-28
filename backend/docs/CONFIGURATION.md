@@ -253,6 +253,43 @@ sandbox:
       read_only: false
 ```
 
+### Checkpointer
+
+Configure persistent conversation state storage:
+
+```yaml
+checkpointer:
+  type: postgres
+  connection_string: postgresql://user:password@localhost:5432/deerflow
+```
+
+**Supported Backends**:
+- `memory` - In-memory (lost on restart, for development)
+- `sqlite` - File-based (default, single-process)
+- `postgres` - PostgreSQL (production, multi-process)
+
+**PostgreSQL Auto-Reconnection**:
+
+DeerFlow automatically retries checkpoint operations when PostgreSQL connections are lost due to network issues, database restarts, or idle timeouts.
+
+- **Retry attempts**: 3 times with exponential backoff (1s, 2s, 4s)
+- **Retryable errors**: Connection failures, transaction errors
+- **Logging**: Only logs final failure or successful recovery
+
+**Connection Pool Tuning** (recommended for production):
+
+```yaml
+checkpointer:
+  type: postgres
+  connection_string: postgresql://user:pass@host/db?min_size=5&max_size=20&timeout=10&reconnect_timeout=60
+```
+
+**Key parameters**:
+- `min_size=5` - Maintain 5 connections (default: 4)
+- `max_size=20` - Allow pool growth (default: unlimited)
+- `timeout=10` - Wait 10s for connection (default: 30s)
+- `reconnect_timeout=60` - Retry failed connections for 60s (default: 300s)
+
 ### Skills
 
 Configure the skills directory for specialized workflows:
