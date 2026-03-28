@@ -23,6 +23,9 @@ class CheckpointerConfig(BaseModel):
         "For sqlite, use a file path like '.deer-flow/checkpoints.db' or ':memory:' for in-memory. "
         "For postgres, use a DSN like 'postgresql://user:pass@localhost:5432/db'.",
     )
+    pool_min_size: int = Field(default=1, description="Minimum pool size (postgres only)")
+    pool_max_size: int = Field(default=10, description="Maximum pool size (postgres only)")
+    pool_timeout: float = Field(default=30.0, description="Connection timeout in seconds (postgres only)")
 
 
 # Global configuration instance — None means no checkpointer is configured.

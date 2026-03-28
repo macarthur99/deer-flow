@@ -521,6 +521,9 @@ checkpointer:
 # checkpointer:
 #   type: postgres
 #   connection_string: postgresql://user:password@localhost:5432/deerflow
+#   pool_min_size: 2        # Minimum connections in pool (default: 1)
+#   pool_max_size: 10       # Maximum connections in pool (default: 10)
+#   pool_timeout: 30.0      # Connection timeout in seconds (default: 30.0)
 
 # ============================================================================
 # IM Channels Configuration

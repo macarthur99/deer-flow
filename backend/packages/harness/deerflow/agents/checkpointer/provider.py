@@ -88,15 +88,27 @@ def _sync_checkpointer_cm(config: CheckpointerConfig) -> Iterator[Checkpointer]:
     if config.type == "postgres":
         try:
             from langgraph.checkpoint.postgres import PostgresSaver
+            from psycopg_pool import ConnectionPool
         except ImportError as exc:
             raise ImportError(POSTGRES_INSTALL) from exc
 
         if not config.connection_string:
             raise ValueError(POSTGRES_CONN_REQUIRED)
 
-        with PostgresSaver.from_conn_string(config.connection_string) as saver:
+        from psycopg.rows import dict_row
+
+        pool = ConnectionPool(
+            conninfo=config.connection_string,
+            min_size=config.pool_min_size,
+            max_size=config.pool_max_size,
+            timeout=config.pool_timeout,
+            kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        )
+        with pool:
+            pool.wait()
+            saver = PostgresSaver(conn=pool)
             saver.setup()
-            logger.info("Checkpointer: using PostgresSaver")
+            logger.info("Checkpointer: using PostgresSaver with connection pool (min=%d, max=%d)", config.pool_min_size, config.pool_max_size)
             yield saver
         return
 

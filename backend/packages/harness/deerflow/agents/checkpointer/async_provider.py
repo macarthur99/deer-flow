@@ -67,17 +67,28 @@ async def _async_checkpointer(config) -> AsyncIterator[Checkpointer]:
     if config.type == "postgres":
         try:
             from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+            from psycopg_pool import AsyncConnectionPool
         except ImportError as exc:
             raise ImportError(POSTGRES_INSTALL) from exc
 
         if not config.connection_string:
             raise ValueError(POSTGRES_CONN_REQUIRED)
 
-        from deerflow.agents.checkpointer.resilient_checkpointer import ResilientCheckpointer
+        from psycopg.rows import dict_row
 
-        async with AsyncPostgresSaver.from_conn_string(config.connection_string) as saver:
+        pool = AsyncConnectionPool(
+            conninfo=config.connection_string,
+            min_size=config.pool_min_size,
+            max_size=config.pool_max_size,
+            timeout=config.pool_timeout,
+            kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        )
+        async with pool:
+            await pool.wait()
+            saver = AsyncPostgresSaver(conn=pool)
             await saver.setup()
-            yield ResilientCheckpointer(saver)
+            logger.info("Checkpointer: using AsyncPostgresSaver with connection pool (min=%d, max=%d)", config.pool_min_size, config.pool_max_size)
+            yield saver
         return
 
     raise ValueError(f"Unknown checkpointer type: {config.type!r}")
