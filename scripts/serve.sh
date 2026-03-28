@@ -130,26 +130,6 @@ else
     GATEWAY_EXTRA_FLAGS=""
 fi
 
-if [ "${SKIP_LANGGRAPH_SERVER:-0}" != "1" ]; then
-    echo "Starting LangGraph server..."
-    # Read log_level from config.yaml, fallback to env var, then to "info"
-    CONFIG_LOG_LEVEL=$(grep -m1 '^log_level:' config.yaml 2>/dev/null | awk '{print $2}' | tr -d ' ')
-    LANGGRAPH_LOG_LEVEL="${LANGGRAPH_LOG_LEVEL:-${CONFIG_LOG_LEVEL:-info}}"
-    (cd backend && NO_COLOR=1 uv run langgraph dev --no-browser --allow-blocking --server-log-level $LANGGRAPH_LOG_LEVEL $LANGGRAPH_EXTRA_FLAGS > ../logs/langgraph.log 2>&1) &
-    ./scripts/wait-for-port.sh 2024 60 "LangGraph" || {
-        echo "  See logs/langgraph.log for details"
-        tail -20 logs/langgraph.log
-        if grep -qE "config_version|outdated|Environment variable .* not found|KeyError|ValidationError|config\.yaml" logs/langgraph.log 2>/dev/null; then
-            echo ""
-            echo "  Hint: This may be a configuration issue. Try running 'make config-upgrade' to update your config.yaml."
-        fi
-        cleanup
-    }
-    echo "✓ LangGraph server started on localhost:2024"
-else
-    echo "⏩ Skipping LangGraph server (SKIP_LANGGRAPH_SERVER=1)"
-    echo "   Use /api/langgraph-compat/* via Gateway instead"
-fi
 
 echo "Starting Gateway API..."
 (cd backend && PYTHONPATH=. python -m uvicorn app.gateway.app:app --host 0.0.0.0 --port 8001 $GATEWAY_EXTRA_FLAGS > ../logs/gateway.log 2>&1) &
