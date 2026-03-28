@@ -2,17 +2,23 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, JSON, MetaData, String, Table
+from sqlalchemy import BigInteger, Column, DateTime, Index, JSON, MetaData, String, Table, func
 
 _metadata = MetaData()
 
 user_memory_table = Table(
     "user_memory",
     _metadata,
-    Column("user_id", String(255), primary_key=True),
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("user_id", String(64), nullable=False),
+    Column("agent_name", String(128), nullable=True),
     Column("memory_data", JSON, nullable=False),
-    Column("version", String(10), default="1.0"),
-    Column("updated_at", DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)),
+    Column("version", String(16), default="1.0", nullable=False),
+    Column("last_updated", DateTime(timezone=True), nullable=False),
+    Column("created_at", DateTime(timezone=True), server_default=func.now()),
+    Column("updated_at", DateTime(timezone=True), server_default=func.now(), onupdate=func.now()),
+    Index("idx_user_id", "user_id"),
+    Index("idx_user_agent", "user_id", "agent_name", unique=True),
 )
 
 

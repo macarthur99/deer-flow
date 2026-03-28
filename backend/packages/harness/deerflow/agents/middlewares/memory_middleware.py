@@ -119,10 +119,16 @@ class MemoryMiddleware(AgentMiddleware[MemoryMiddlewareState]):
         if not config.enabled:
             return None
 
-        # Get thread ID from runtime context
+        # Get thread ID and user_id from runtime context
         thread_id = runtime.context.get("thread_id") if runtime.context else None
+        user_id = runtime.context.get("user_id") if runtime.context else None
+
         if not thread_id:
             print("MemoryMiddleware: No thread_id in context, skipping memory update")
+            return None
+
+        if not user_id:
+            print("MemoryMiddleware: No user_id in context, skipping memory update")
             return None
 
         # Get messages from state
@@ -144,6 +150,6 @@ class MemoryMiddleware(AgentMiddleware[MemoryMiddlewareState]):
 
         # Queue the filtered conversation for memory update
         queue = get_memory_queue()
-        queue.add(thread_id=thread_id, messages=filtered_messages, agent_name=self._agent_name)
+        queue.add(thread_id=thread_id, messages=filtered_messages, agent_name=self._agent_name, user_id=user_id)
 
         return None

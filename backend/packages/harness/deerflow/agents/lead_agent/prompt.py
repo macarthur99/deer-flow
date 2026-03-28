@@ -336,10 +336,11 @@ combined with a FastAPI gateway for REST API access [citation:FastAPI](https://f
 """
 
 
-def _get_memory_context(agent_name: str | None = None) -> str:
+def _get_memory_context(user_id: str | None = None, agent_name: str | None = None) -> str:
     """Get memory context for injection into system prompt.
 
     Args:
+        user_id: User ID for memory isolation (required).
         agent_name: If provided, loads per-agent memory. If None, loads global memory.
 
     Returns:
@@ -353,7 +354,10 @@ def _get_memory_context(agent_name: str | None = None) -> str:
         if not config.enabled or not config.injection_enabled:
             return ""
 
-        memory_data = get_memory_data(agent_name)
+        if not user_id:
+            return ""
+
+        memory_data = get_memory_data(user_id, agent_name)
         memory_content = format_memory_for_injection(memory_data, max_tokens=config.max_injection_tokens)
 
         if not memory_content.strip():
@@ -368,13 +372,17 @@ def _get_memory_context(agent_name: str | None = None) -> str:
         return ""
 
 
-def get_skills_prompt_section(available_skills: set[str] | None = None) -> str:
+def get_skills_prompt_section(user_id: str | None = None, available_skills: set[str] | None = None) -> str:
     """Generate the skills prompt section with available skills list.
+
+    Args:
+        user_id: User ID for loading custom skills. If None, only public skills are loaded.
+        available_skills: Optional set of skill names to filter by.
 
     Returns the <skill_system>...</skill_system> block listing all enabled skills,
     suitable for injection into any agent's system prompt.
     """
-    skills = load_skills(enabled_only=True)
+    skills = load_skills(user_id=user_id, enabled_only=True)
 
     try:
         from deerflow.config import get_app_config
@@ -465,9 +473,11 @@ def _build_acp_section() -> str:
     )
 
 
-def apply_prompt_template(subagent_enabled: bool = False, max_concurrent_subagents: int = 3, *, agent_name: str | None = None, available_skills: set[str] | None = None) -> str:
+def apply_prompt_template(subagent_enabled: bool = False, max_concurrent_subagents: int = 3, *, agent_name: str | None = None, available_skills: set[str] | None = None, user_id: str | None = None) -> str:
+    # user_id is now passed as parameter from make_lead_agent
+
     # Get memory context
-    memory_context = _get_memory_context(agent_name)
+    memory_context = _get_memory_context(user_id, agent_name)
 
     # Include subagent section only if enabled (from runtime parameter)
     n = max_concurrent_subagents
@@ -492,7 +502,7 @@ def apply_prompt_template(subagent_enabled: bool = False, max_concurrent_subagen
     )
 
     # Get skills section
-    skills_section = get_skills_prompt_section(available_skills)
+    skills_section = get_skills_prompt_section(user_id, available_skills)
 
     # Get deferred tools section (tool_search)
     deferred_tools_section = get_deferred_tools_prompt_section()

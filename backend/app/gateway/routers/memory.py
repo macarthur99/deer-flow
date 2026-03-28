@@ -76,10 +76,13 @@ class MemoryStatusResponse(BaseModel):
     "/memory",
     response_model=MemoryResponse,
     summary="Get Memory Data",
-    description="Retrieve the current global memory data including user context, history, and facts.",
+    description="Retrieve the current memory data for a specific user including user context, history, and facts.",
 )
-async def get_memory() -> MemoryResponse:
-    """Get the current global memory data.
+async def get_memory(user_id: str) -> MemoryResponse:
+    """Get the current memory data for a specific user.
+
+    Args:
+        user_id: User ID for memory isolation (required query parameter).
 
     Returns:
         The current memory data with user context, history, and facts.
@@ -112,7 +115,7 @@ async def get_memory() -> MemoryResponse:
         }
         ```
     """
-    memory_data = get_memory_data()
+    memory_data = get_memory_data(user_id)
     return MemoryResponse(**memory_data)
 
 
@@ -122,8 +125,11 @@ async def get_memory() -> MemoryResponse:
     summary="Reload Memory Data",
     description="Reload memory data from the storage file, refreshing the in-memory cache.",
 )
-async def reload_memory() -> MemoryResponse:
+async def reload_memory(user_id: str) -> MemoryResponse:
     """Reload memory data from file.
+
+    Args:
+        user_id: User ID for memory isolation (required query parameter).
 
     This forces a reload of the memory data from the storage file,
     useful when the file has been modified externally.
@@ -131,7 +137,7 @@ async def reload_memory() -> MemoryResponse:
     Returns:
         The reloaded memory data.
     """
-    memory_data = reload_memory_data()
+    memory_data = reload_memory_data(user_id)
     return MemoryResponse(**memory_data)
 
 
@@ -178,14 +184,17 @@ async def get_memory_config_endpoint() -> MemoryConfigResponse:
     summary="Get Memory Status",
     description="Retrieve both memory configuration and current data in a single request.",
 )
-async def get_memory_status() -> MemoryStatusResponse:
+async def get_memory_status(user_id: str) -> MemoryStatusResponse:
     """Get the memory system status including configuration and data.
+
+    Args:
+        user_id: User ID for memory isolation (required query parameter).
 
     Returns:
         Combined memory configuration and current data.
     """
     config = get_memory_config()
-    memory_data = get_memory_data()
+    memory_data = get_memory_data(user_id)
 
     return MemoryStatusResponse(
         config=MemoryConfigResponse(

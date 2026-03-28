@@ -17,13 +17,13 @@ from deerflow.models import create_chat_model
 
 logger = logging.getLogger(__name__)
 
-def get_memory_data(agent_name: str | None = None) -> dict[str, Any]:
+def get_memory_data(user_id: str, agent_name: str | None = None) -> dict[str, Any]:
     """Get the current memory data via storage provider."""
-    return get_memory_storage().load(agent_name)
+    return get_memory_storage().load(user_id, agent_name)
 
-def reload_memory_data(agent_name: str | None = None) -> dict[str, Any]:
+def reload_memory_data(user_id: str, agent_name: str | None = None) -> dict[str, Any]:
     """Reload memory data via storage provider."""
-    return get_memory_storage().reload(agent_name)
+    return get_memory_storage().reload(user_id, agent_name)
 
 
 def _extract_text(content: Any) -> str:
@@ -126,11 +126,12 @@ class MemoryUpdater:
         model_name = self._model_name or config.model_name
         return create_chat_model(name=model_name, thinking_enabled=False)
 
-    def update_memory(self, messages: list[Any], thread_id: str | None = None, agent_name: str | None = None) -> bool:
+    def update_memory(self, messages: list[Any], user_id: str, thread_id: str | None = None, agent_name: str | None = None) -> bool:
         """Update memory based on conversation messages.
 
         Args:
             messages: List of conversation messages.
+            user_id: User ID for memory isolation.
             thread_id: Optional thread ID for tracking source.
             agent_name: If provided, updates per-agent memory. If None, updates global memory.
 
@@ -146,7 +147,7 @@ class MemoryUpdater:
 
         try:
             # Get current memory
-            current_memory = get_memory_data(agent_name)
+            current_memory = get_memory_data(user_id, agent_name)
 
             # Format conversation for prompt
             conversation_text = format_conversation_for_update(messages)
@@ -183,7 +184,7 @@ class MemoryUpdater:
             updated_memory = _strip_upload_mentions_from_memory(updated_memory)
 
             # Save
-            return get_memory_storage().save(updated_memory, agent_name)
+            return get_memory_storage().save(updated_memory, user_id, agent_name)
 
         except json.JSONDecodeError as e:
             logger.warning("Failed to parse LLM response for memory update: %s", e)
@@ -272,11 +273,12 @@ class MemoryUpdater:
         return current_memory
 
 
-def update_memory_from_conversation(messages: list[Any], thread_id: str | None = None, agent_name: str | None = None) -> bool:
+def update_memory_from_conversation(messages: list[Any], user_id: str, thread_id: str | None = None, agent_name: str | None = None) -> bool:
     """Convenience function to update memory from a conversation.
 
     Args:
         messages: List of conversation messages.
+        user_id: User ID for memory isolation.
         thread_id: Optional thread ID.
         agent_name: If provided, updates per-agent memory. If None, updates global memory.
 
@@ -284,4 +286,4 @@ def update_memory_from_conversation(messages: list[Any], thread_id: str | None =
         True if successful, False otherwise.
     """
     updater = MemoryUpdater()
-    return updater.update_memory(messages, thread_id, agent_name)
+    return updater.update_memory(messages, user_id, thread_id, agent_name)

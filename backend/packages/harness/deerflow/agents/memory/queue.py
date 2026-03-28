@@ -15,6 +15,7 @@ class ConversationContext:
 
     thread_id: str
     messages: list[Any]
+    user_id: str
     timestamp: datetime = field(default_factory=datetime.utcnow)
     agent_name: str | None = None
 
@@ -34,14 +35,18 @@ class MemoryUpdateQueue:
         self._timer: threading.Timer | None = None
         self._processing = False
 
-    def add(self, thread_id: str, messages: list[Any], agent_name: str | None = None) -> None:
+    def add(self, thread_id: str, messages: list[Any], agent_name: str | None = None, user_id: str | None = None) -> None:
         """Add a conversation to the update queue.
 
         Args:
             thread_id: The thread ID.
             messages: The conversation messages.
             agent_name: If provided, memory is stored per-agent. If None, uses global memory.
+            user_id: User ID for memory isolation (required).
         """
+        if not user_id:
+            raise ValueError("user_id is required for memory updates")
+
         config = get_memory_config()
         if not config.enabled:
             return
@@ -49,6 +54,7 @@ class MemoryUpdateQueue:
         context = ConversationContext(
             thread_id=thread_id,
             messages=messages,
+            user_id=user_id,
             agent_name=agent_name,
         )
 
@@ -110,6 +116,7 @@ class MemoryUpdateQueue:
                     print(f"Updating memory for thread {context.thread_id}")
                     success = updater.update_memory(
                         messages=context.messages,
+                        user_id=context.user_id,
                         thread_id=context.thread_id,
                         agent_name=context.agent_name,
                     )

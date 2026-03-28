@@ -116,6 +116,7 @@ def safe_extract_skill_archive(
 
 def install_skill_from_archive(
     zip_path: str | Path,
+    user_id: str,
     *,
     skills_root: Path | None = None,
 ) -> dict:
@@ -123,6 +124,7 @@ def install_skill_from_archive(
 
     Args:
         zip_path: Path to the .skill file.
+        user_id: User ID for installing to custom/{user_id}/ directory.
         skills_root: Override the skills root directory. If None, uses
             the default from config.
 
@@ -132,9 +134,18 @@ def install_skill_from_archive(
     Raises:
         FileNotFoundError: If the file does not exist.
         ValueError: If the file is invalid (wrong extension, bad ZIP,
-            invalid frontmatter, duplicate name).
+            invalid frontmatter, duplicate name, invalid user_id).
     """
-    logger.info("Installing skill from %s", zip_path)
+    # Validate user_id
+    if not user_id or not isinstance(user_id, str):
+        raise ValueError("user_id is required and must be a string")
+    if not 1 <= len(user_id) <= 64:
+        raise ValueError("user_id must be 1-64 characters")
+    import re
+    if not re.match(r"^[a-zA-Z0-9_-]+$", user_id):
+        raise ValueError("user_id must contain only alphanumeric, underscore, or dash characters")
+
+    logger.info("Installing skill from %s for user %s", zip_path, user_id)
     path = Path(zip_path)
     if not path.is_file():
         if not path.exists():
@@ -145,8 +156,8 @@ def install_skill_from_archive(
 
     if skills_root is None:
         skills_root = get_skills_root_path()
-    custom_dir = skills_root / "custom"
-    custom_dir.mkdir(parents=True, exist_ok=True)
+    custom_user_dir = skills_root / "custom" / user_id
+    custom_user_dir.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
@@ -169,12 +180,12 @@ def install_skill_from_archive(
         if not skill_name or "/" in skill_name or "\\" in skill_name or ".." in skill_name:
             raise ValueError(f"Invalid skill name: {skill_name}")
 
-        target = custom_dir / skill_name
+        target = custom_user_dir / skill_name
         if target.exists():
             raise SkillAlreadyExistsError(f"Skill '{skill_name}' already exists")
 
         shutil.copytree(skill_dir, target)
-        logger.info("Skill %r installed to %s", skill_name, target)
+        logger.info("Skill %r installed to %s for user %s", skill_name, target, user_id)
 
     return {
         "success": True,

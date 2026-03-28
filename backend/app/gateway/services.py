@@ -101,6 +101,19 @@ def resolve_agent_factory(assistant_id: str | None):
     return make_lead_agent
 
 
+def validate_user_id(user_id: str | None) -> None:
+    """Validate user_id format."""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required in metadata")
+    if not isinstance(user_id, str):
+        raise HTTPException(status_code=400, detail="user_id must be a string")
+    if not 1 <= len(user_id) <= 64:
+        raise HTTPException(status_code=400, detail="user_id must be 1-64 characters")
+    import re
+    if not re.match(r"^[a-zA-Z0-9_-]+$", user_id):
+        raise HTTPException(status_code=400, detail="user_id must contain only alphanumeric, underscore, or dash characters")
+
+
 def build_run_config(thread_id: str, request_config: dict[str, Any] | None, metadata: dict[str, Any] | None) -> dict[str, Any]:
     """Build a RunnableConfig dict for the agent."""
     configurable = {"thread_id": thread_id}
@@ -138,6 +151,10 @@ async def start_run(
     request : Request
         FastAPI request — used to retrieve singletons from ``app.state``.
     """
+    # Validate user_id in metadata
+    user_id = body.metadata.get("user_id") if body.metadata else None
+    validate_user_id(user_id)
+
     bridge = get_stream_bridge(request)
     run_mgr = get_run_manager(request)
     checkpointer = get_checkpointer(request)

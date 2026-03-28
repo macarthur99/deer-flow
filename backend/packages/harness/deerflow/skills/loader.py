@@ -19,17 +19,19 @@ def get_skills_root_path() -> Path:
     return skills_dir
 
 
-def load_skills(skills_path: Path | None = None, use_config: bool = True, enabled_only: bool = False) -> list[Skill]:
+def load_skills(skills_path: Path | None = None, user_id: str | None = None, use_config: bool = True, enabled_only: bool = False) -> list[Skill]:
     """
     Load all skills from the skills directory.
 
-    Scans both public and custom skill directories, parsing SKILL.md files
-    to extract metadata. The enabled state is determined by the skills_state_config.json file.
+    Scans public skills (shared by all users) and custom skills (per-user).
+    The enabled state is determined by the skills_state_config.json file.
 
     Args:
         skills_path: Optional custom path to skills directory.
                      If not provided and use_config is True, uses path from config.
                      Otherwise defaults to deer-flow/skills
+        user_id: User ID for loading custom skills. If provided, loads custom/{user_id}/ skills.
+                 If None, no custom skills are loaded.
         use_config: Whether to load skills path from config (default: True)
         enabled_only: If True, only return enabled skills (default: False)
 
@@ -54,24 +56,36 @@ def load_skills(skills_path: Path | None = None, use_config: bool = True, enable
 
     skills = []
 
-    # Scan public and custom directories
-    for category in ["public", "custom"]:
-        category_path = skills_path / category
-        if not category_path.exists() or not category_path.is_dir():
-            continue
-
-        for current_root, dir_names, file_names in os.walk(category_path, followlinks=True):
-            # Keep traversal deterministic and skip hidden directories.
+    # Load public skills (shared by all users)
+    public_path = skills_path / "public"
+    if public_path.exists() and public_path.is_dir():
+        for current_root, dir_names, file_names in os.walk(public_path, followlinks=True):
             dir_names[:] = sorted(name for name in dir_names if not name.startswith("."))
             if "SKILL.md" not in file_names:
                 continue
 
             skill_file = Path(current_root) / "SKILL.md"
-            relative_path = skill_file.parent.relative_to(category_path)
+            relative_path = skill_file.parent.relative_to(public_path)
 
-            skill = parse_skill_file(skill_file, category=category, relative_path=relative_path)
+            skill = parse_skill_file(skill_file, category="public", relative_path=relative_path)
             if skill:
                 skills.append(skill)
+
+    # Load custom skills (per-user)
+    if user_id:
+        custom_user_path = skills_path / "custom" / user_id
+        if custom_user_path.exists() and custom_user_path.is_dir():
+            for current_root, dir_names, file_names in os.walk(custom_user_path, followlinks=True):
+                dir_names[:] = sorted(name for name in dir_names if not name.startswith("."))
+                if "SKILL.md" not in file_names:
+                    continue
+
+                skill_file = Path(current_root) / "SKILL.md"
+                relative_path = skill_file.parent.relative_to(custom_user_path)
+
+                skill = parse_skill_file(skill_file, category="custom", relative_path=relative_path)
+                if skill:
+                    skills.append(skill)
 
     # Load skills state configuration and update enabled status
     # NOTE: We use ExtensionsConfig.from_file() instead of get_extensions_config()

@@ -67,11 +67,11 @@ def _skill_to_response(skill: Skill) -> SkillResponse:
     "/skills",
     response_model=SkillsListResponse,
     summary="List All Skills",
-    description="Retrieve a list of all available skills from both public and custom directories.",
+    description="Retrieve a list of all available skills (public + user's custom skills).",
 )
-async def list_skills() -> SkillsListResponse:
+async def list_skills(user_id: str) -> SkillsListResponse:
     try:
-        skills = load_skills(enabled_only=False)
+        skills = load_skills(user_id=user_id, enabled_only=False)
         return SkillsListResponse(skills=[_skill_to_response(skill) for skill in skills])
     except Exception as e:
         logger.error(f"Failed to load skills: {e}", exc_info=True)
@@ -84,9 +84,9 @@ async def list_skills() -> SkillsListResponse:
     summary="Get Skill Details",
     description="Retrieve detailed information about a specific skill by its name.",
 )
-async def get_skill(skill_name: str) -> SkillResponse:
+async def get_skill(skill_name: str, user_id: str) -> SkillResponse:
     try:
-        skills = load_skills(enabled_only=False)
+        skills = load_skills(user_id=user_id, enabled_only=False)
         skill = next((s for s in skills if s.name == skill_name), None)
 
         if skill is None:
@@ -106,9 +106,9 @@ async def get_skill(skill_name: str) -> SkillResponse:
     summary="Update Skill",
     description="Update a skill's enabled status by modifying the extensions_config.json file.",
 )
-async def update_skill(skill_name: str, request: SkillUpdateRequest) -> SkillResponse:
+async def update_skill(skill_name: str, user_id: str, request: SkillUpdateRequest) -> SkillResponse:
     try:
-        skills = load_skills(enabled_only=False)
+        skills = load_skills(user_id=user_id, enabled_only=False)
         skill = next((s for s in skills if s.name == skill_name), None)
 
         if skill is None:
@@ -155,10 +155,10 @@ async def update_skill(skill_name: str, request: SkillUpdateRequest) -> SkillRes
     summary="Install Skill",
     description="Install a skill from a .skill file (ZIP archive) located in the thread's user-data directory.",
 )
-async def install_skill(request: SkillInstallRequest) -> SkillInstallResponse:
+async def install_skill(user_id: str, request: SkillInstallRequest) -> SkillInstallResponse:
     try:
         skill_file_path = resolve_thread_virtual_path(request.thread_id, request.path)
-        result = install_skill_from_archive(skill_file_path)
+        result = install_skill_from_archive(skill_file_path, user_id=user_id)
         return SkillInstallResponse(**result)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
