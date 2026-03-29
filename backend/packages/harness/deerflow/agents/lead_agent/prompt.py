@@ -265,12 +265,12 @@ You: "Deploying to staging..." [proceed]
 <citations>
 **CRITICAL: Always include citations when using web search results**
 
-- **When to Use**: MANDATORY after web_search, web_fetch, or any external information source
-- **Format**: Use Markdown link format `[citation:[N]](URL)` immediately after the claim (N is sequential number)
-- **Numbering**: Use sequential numbers (1, 2, 3...) based on unique URLs
-  - Same URL = Same number (e.g., if URL A appears twice, both use [citation:[1]])
-  - Different URL = New number (e.g., URL B gets [citation:[2]])
-  - Number assignment order: first appearance of each unique URL
+- **When to Use**: MANDATORY after web_search or any external information source
+- **Format**: Use Markdown link format `[citation:[N]](fileId)` immediately after the claim (N is sequential number)
+- **Numbering**: Use sequential numbers (1, 2, 3...) based on unique fileIds
+  - Same fileId = Same number (e.g., if fileId A appears twice, both use [citation:[1]])
+  - Different fileId = New number (e.g., fileId B gets [citation:[2]])
+  - Number assignment order: first appearance of each unique fileId
 - **Document Citations**: For uploaded files or internal search results with FileID:
   - Use the FileID as the citation link: `[citation:[N]](fileId)`
   - Example: 根据报告 [citation:[1]](http://internal.example.com/doc/12345)
@@ -315,23 +315,23 @@ combined with a FastAPI gateway for REST API access [citation:[4]](https://fasta
 ```
 
 **CRITICAL: Sources section format:**
-- Every item in the Sources section MUST be a clickable markdown link with URL
-- Use standard markdown link `[Title](URL) - Description` format (NOT `[citation:...]` format)
-- The `[citation:[N]](URL)` format is ONLY for inline citations within the report body
-- ❌ WRONG: `GitHub 仓库 - 官方源代码和文档` (no URL!)
-- ❌ WRONG in Sources: `[citation:[GitHub Repository]](url)` (citation prefix is for inline only!)
+- Every item in the Sources section MUST be a clickable markdown link with fileId
+- Use standard markdown link `[Title](fileId) - Description` format (NOT `[citation:...]` format)
+- The `[citation:[N]](fileId)` format is ONLY for inline citations within the report body
+- ❌ WRONG: `GitHub 仓库 - 官方源代码和文档` (no fileId!)
+- ❌ WRONG in Sources: `[citation:[GitHub Repository]](fileId)` (citation prefix is for inline only!)
 - ✅ RIGHT in Sources: `[GitHub Repository](https://github.com/bytedance/deer-flow) - 官方源代码和文档`
 
 **WORKFLOW for Research Tasks:**
-1. Use web_search to find sources → Extract {{title, url, snippet}} from results
-2. Write content with inline citations: `claim [citation:[N]](url)` (N = 1, 2, 3...)
+1. Use web_search to find sources → Extract {{fileName, fileId, snippet}} from results
+2. Write content with inline citations: `claim [citation:[N]](fileId)` (N = 1, 2, 3...)
 3. Collect all citations in a "Sources" section at the end with full titles
 4. NEVER write claims without citations when sources are available
 
 **CRITICAL RULES:**
 - ❌ DO NOT write research content without citations
-- ❌ DO NOT forget to extract URLs from search results
-- ✅ ALWAYS add `[citation:[N]](URL)` after claims from external sources
+- ❌ DO NOT forget to extract fileIds from search results
+- ✅ ALWAYS add `[citation:[N]](fileId)` after claims from external sources
 - ✅ ALWAYS include a "Sources" section listing all references
 </citations>
 

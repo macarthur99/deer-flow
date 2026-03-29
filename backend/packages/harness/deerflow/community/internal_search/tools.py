@@ -62,7 +62,7 @@ def web_search_tool(
             {
                 "fileId": item["fileId"],
                 "fileName": item.get("fileName"),
-                "content": item.get("content", ""),
+                "snippet": item.get("content", ""),
             }
             for item in data if "fileId" in item
         ]
