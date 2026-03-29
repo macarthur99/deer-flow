@@ -5,6 +5,7 @@ from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.runnables import RunnableConfig
 
 from deerflow.agents.lead_agent.prompt import apply_prompt_template
+from deerflow.agents.middlewares.citation_middleware import CitationMiddleware
 from deerflow.agents.middlewares.clarification_middleware import ClarificationMiddleware
 from deerflow.agents.middlewares.loop_detection_middleware import LoopDetectionMiddleware
 from deerflow.agents.middlewares.memory_middleware import MemoryMiddleware
@@ -235,6 +236,9 @@ def _build_middlewares(config: RunnableConfig, model_name: str | None, agent_nam
     # Add TitleMiddleware
     middlewares.append(TitleMiddleware())
 
+    # Add CitationMiddleware (before MemoryMiddleware to preserve citations)
+    middlewares.append(CitationMiddleware())
+
     # Add MemoryMiddleware (after TitleMiddleware)
     middlewares.append(MemoryMiddleware(agent_name=agent_name))
 
@@ -259,19 +263,6 @@ def _build_middlewares(config: RunnableConfig, model_name: str | None, agent_nam
 
     # LoopDetectionMiddleware — detect and break repetitive tool call loops
     middlewares.append(LoopDetectionMiddleware())
-
-    # CitationVerificationMiddleware — verify citation completeness
-    citation_config = get_app_config().citation_verification
-    if citation_config.enabled and citation_config.strictness != "off":
-        from deerflow.agents.middlewares.citation_verification_middleware import CitationVerificationMiddleware
-
-        middlewares.append(
-            CitationVerificationMiddleware(
-                strictness=citation_config.strictness,
-                long_text_threshold=citation_config.long_text_threshold,
-                tracked_tools=citation_config.tracked_tools,
-            )
-        )
 
     # ClarificationMiddleware should always be last
     middlewares.append(ClarificationMiddleware())

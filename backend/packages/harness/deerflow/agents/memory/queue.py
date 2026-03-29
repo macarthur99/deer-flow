@@ -1,5 +1,6 @@
 """Memory update queue with debounce mechanism."""
 
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
@@ -7,6 +8,8 @@ from datetime import datetime
 from typing import Any
 
 from deerflow.config.memory_config import get_memory_config
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -67,7 +70,7 @@ class MemoryUpdateQueue:
             # Reset or start the debounce timer
             self._reset_timer()
 
-        print(f"Memory update queued for thread {thread_id}, queue size: {len(self._queue)}")
+        logger.info("Memory update queued for thread %s, queue size: %d", thread_id, len(self._queue))
 
     def _reset_timer(self) -> None:
         """Reset the debounce timer."""

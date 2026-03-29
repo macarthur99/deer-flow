@@ -63,8 +63,6 @@ def web_search_tool(
                 "fileId": item["fileId"],
                 "fileName": item.get("fileName"),
                 "content": item.get("content", ""),
-                "score": item.get("score", 0.0),
-                "search_key": search_key,
             }
             for item in data if "fileId" in item
         ]
@@ -74,7 +72,6 @@ def web_search_tool(
 
         return Command(
             update={
-                "search_results": search_results,
                 "messages": [ToolMessage(json_results, tool_call_id=tool_call_id)],
             }
         )
