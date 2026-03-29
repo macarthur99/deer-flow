@@ -577,3 +577,9 @@ checkpointer:
 #     use: my_package:MyGuardrailProvider
 #     config:
 #       key: value
+citation_verification:
+  enabled: true  # Enable citation verification (default: false)
+  strictness: warn  # Verification level: off | warn | strict
+  long_text_threshold: 2000  # Character count for enhanced reminders
+  tracked_tools:  # Tools to track for citation verification
+    - web_search  # Tracks 'fileId' field from internal_search

@@ -23,6 +23,7 @@ from app.gateway.routers import (
     uploads,
 )
 from deerflow.config.app_config import get_app_config
+from deerflow.database.connection import init_async_engine, close_async_engine
 
 # Configure logging
 logging.basicConfig(
@@ -49,6 +50,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     config = get_gateway_config()
     logger.info(f"Starting API Gateway on {config.host}:{config.port}")
 
+    # Initialize database engine for memory storage
+    try:
+        await init_async_engine()
+        logger.info("Database engine initialized successfully")
+    except Exception as e:
+        logger.warning(f"Failed to initialize database engine: {e}")
+
     # Initialize LangGraph runtime components (StreamBridge, RunManager, checkpointer)
     async with langgraph_runtime(app):
         logger.info("LangGraph runtime initialised")
@@ -74,6 +82,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await stop_channel_service()
     except Exception:
         logger.exception("Failed to stop channel service")
+
+    # Close database engine
+    try:
+        await close_async_engine()
+        logger.info("Database engine closed")
+    except Exception:
+        logger.exception("Failed to close database engine")
 
     # Cleanup LangGraph runtime
     await bridge_cm.__aexit__(None, None, None)

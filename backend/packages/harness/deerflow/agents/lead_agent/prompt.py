@@ -263,14 +263,14 @@ You: "Deploying to staging..." [proceed]
 **CRITICAL: Always include citations when using web search results**
 
 - **When to Use**: MANDATORY after web_search, web_fetch, or any external information source
-- **Format**: Use Markdown link format `[citation:N](URL)` immediately after the claim (N is sequential number)
+- **Format**: Use Markdown link format `[citation:[N]](URL)` immediately after the claim (N is sequential number)
 - **Numbering**: Use sequential numbers (1, 2, 3...) based on unique URLs
-  - Same URL = Same number (e.g., if URL A appears twice, both use [citation:1])
-  - Different URL = New number (e.g., URL B gets [citation:2])
+  - Same URL = Same number (e.g., if URL A appears twice, both use [citation:[1]])
+  - Different URL = New number (e.g., URL B gets [citation:[2]])
   - Number assignment order: first appearance of each unique URL
 - **Document Citations**: For uploaded files or internal search results with FileID:
-  - Use the FileID as the citation link: `[citation:N](fileId)`
-  - Example: 根据报告 [citation:1](http://internal.example.com/doc/12345)
+  - Use the FileID as the citation link: `[citation:[N]](fileId)`
+  - Example: 根据报告 [citation:[1]](http://internal.example.com/doc/12345)
   - FileIDs are shown in <uploaded_files> section or returned by internal_search tool
 - **Placement**: Inline citations should appear right after the sentence or claim they support
 - **Sources Section**: Also collect all citations in a "Sources" section at the end of reports
@@ -278,11 +278,11 @@ You: "Deploying to staging..." [proceed]
 **Example - Inline Citations:**
 ```markdown
 The key AI trends for 2026 include enhanced reasoning capabilities and multimodal integration
-[citation:1](https://techcrunch.com/ai-trends).
+[citation:[1]](https://techcrunch.com/ai-trends).
 Recent breakthroughs in language models have also accelerated progress
-[citation:2](https://openai.com/research).
+[citation:[2]](https://openai.com/research).
 Industry experts also highlight the importance of multimodal systems
-[citation:1](https://techcrunch.com/ai-trends).
+[citation:[1]](https://techcrunch.com/ai-trends).
 ```
 
 **Example - Deep Research Report with Citations:**
@@ -290,16 +290,16 @@ Industry experts also highlight the importance of multimodal systems
 ## Executive Summary
 
 DeerFlow is an open-source AI agent framework that gained significant traction in early 2026
-[citation:1](https://github.com/bytedance/deer-flow). The project focuses on
+[citation:[1]](https://github.com/bytedance/deer-flow). The project focuses on
 providing a production-ready agent system with sandbox execution and memory management
-[citation:2](https://deer-flow.dev/docs).
+[citation:[2]](https://deer-flow.dev/docs).
 
 ## Key Analysis
 
 ### Architecture Design
 
-The system uses LangGraph for workflow orchestration [citation:3](https://langchain.com/langgraph),
-combined with a FastAPI gateway for REST API access [citation:4](https://fastapi.tiangolo.com).
+The system uses LangGraph for workflow orchestration [citation:[3]](https://langchain.com/langgraph),
+combined with a FastAPI gateway for REST API access [citation:[4]](https://fastapi.tiangolo.com).
 
 ## Sources
 
@@ -314,21 +314,21 @@ combined with a FastAPI gateway for REST API access [citation:4](https://fastapi
 **CRITICAL: Sources section format:**
 - Every item in the Sources section MUST be a clickable markdown link with URL
 - Use standard markdown link `[Title](URL) - Description` format (NOT `[citation:...]` format)
-- The `[citation:N](URL)` format is ONLY for inline citations within the report body
+- The `[citation:[N]](URL)` format is ONLY for inline citations within the report body
 - ❌ WRONG: `GitHub 仓库 - 官方源代码和文档` (no URL!)
-- ❌ WRONG in Sources: `[citation:GitHub Repository](url)` (citation prefix is for inline only!)
+- ❌ WRONG in Sources: `[citation:[GitHub Repository]](url)` (citation prefix is for inline only!)
 - ✅ RIGHT in Sources: `[GitHub Repository](https://github.com/bytedance/deer-flow) - 官方源代码和文档`
 
 **WORKFLOW for Research Tasks:**
 1. Use web_search to find sources → Extract {{title, url, snippet}} from results
-2. Write content with inline citations: `claim [citation:N](url)` (N = 1, 2, 3...)
+2. Write content with inline citations: `claim [citation:[N]](url)` (N = 1, 2, 3...)
 3. Collect all citations in a "Sources" section at the end with full titles
 4. NEVER write claims without citations when sources are available
 
 **CRITICAL RULES:**
 - ❌ DO NOT write research content without citations
 - ❌ DO NOT forget to extract URLs from search results
-- ✅ ALWAYS add `[citation:N](URL)` after claims from external sources
+- ✅ ALWAYS add `[citation:[N]](URL)` after claims from external sources
 - ✅ ALWAYS include a "Sources" section listing all references
 </citations>
 

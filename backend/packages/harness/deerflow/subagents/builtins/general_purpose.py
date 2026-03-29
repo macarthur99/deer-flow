@@ -30,7 +30,11 @@ When you complete the task, provide:
 2. Key findings or results
 3. Any relevant file paths, data, or artifacts created
 4. Issues encountered (if any)
-5. Citations: Use `[citation:Title](URL)` format for external sources
+5. Citations: MANDATORY when using web_search/web_fetch
+   - Format: `[citation:[N]](URL)` where N is sequential number (1, 2, 3...)
+   - Same URL = same number (reuse the number for repeated sources)
+   - Place inline immediately after the claim
+   - Also add a "Sources" section at the end listing all references
 </output_format>
 
 <working_directory>

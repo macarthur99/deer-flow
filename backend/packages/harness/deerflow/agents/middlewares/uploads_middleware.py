@@ -1,3 +1,4 @@
+
 """Middleware to inject uploaded files information into agent context."""
 
 import logging

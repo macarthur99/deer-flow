@@ -2,11 +2,12 @@ import json
 import re
 import threading
 from collections import OrderedDict
-from typing import Any, Literal
+from typing import Any, Awaitable, Callable, Literal
 from urllib.parse import urlparse
 
 from langchain.agents.middleware import AgentMiddleware
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain.agents.middleware.types import ToolCallRequest
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.types import Command
 
 
@@ -17,7 +18,7 @@ class CitationVerificationMiddleware(AgentMiddleware):
     in the AI's response using [citation:N](URL) format.
     """
 
-    CITATION_PATTERN = re.compile(r'\[citation:\d+\]\(([^)]+)\)')
+    CITATION_PATTERN = re.compile(r'\[citation:\[\d+\]\]\(([^)]+)\)')
 
     def __init__(
         self,
@@ -114,7 +115,37 @@ Quality over coverage - only cite where appropriate."""
 
         return None
 
-    def after_model(self, result: Command | list[dict[str, Any]], state: dict[str, Any]) -> Command | list[dict[str, Any]] | None:
+    async def awrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command]],
+    ) -> ToolMessage | Command:
+        """Async version: Track URLs from web search/fetch tools."""
+        result = await handler(request)
+
+        tool_name = request.tool_call.get("name", "")
+        if self.strictness == "off" or tool_name not in self.tracked_tools:
+            return result
+
+        thread_id = request.state.get("configurable", {}).get("thread_id")
+        if not thread_id:
+            return result
+
+        tool_args = request.tool_call.get("args", {})
+        tool_result = result.content if isinstance(result, ToolMessage) else ""
+
+        urls = self._extract_urls_from_tool_result(tool_name, tool_args, tool_result)
+        if urls:
+            with self._lock:
+                if thread_id not in self._pending_urls:
+                    self._pending_urls[thread_id] = set()
+                    if len(self._pending_urls) > self.max_tracked_threads:
+                        self._pending_urls.popitem(last=False)
+                self._pending_urls[thread_id].update(urls)
+
+        return result
+
+    def after_model(self, state: dict[str, Any], runtime) -> dict | None:
         """Verify citations in AI response."""
         if self.strictness == "off":
             return None
@@ -130,8 +161,8 @@ Quality over coverage - only cite where appropriate."""
                 return None
             pending_urls = pending_urls.copy()
 
-        # Extract AI message content
-        messages = result if isinstance(result, list) else result.get("messages", [])
+        # Extract AI message content from state
+        messages = state.get("messages", [])
         if not messages:
             return None
 
