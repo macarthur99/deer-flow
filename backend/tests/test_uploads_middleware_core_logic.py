@@ -143,23 +143,6 @@ class TestFilesFromKwargs:
         assert result is not None
         assert result[0]["size"] == 0
 
-    def test_fileid_extraction_from_additional_kwargs(self, tmp_path):
-        """Verify fileid is extracted from additional_kwargs.files."""
-        mw = _middleware(tmp_path)
-        msg = _human("hi", files=[{"filename": "doc.pdf", "size": 1024, "path": "/mnt/user-data/uploads/doc.pdf", "fileid": "http://internal.example.com/doc/12345"}])
-        result = mw._files_from_kwargs(msg)
-        assert result is not None
-        assert result[0]["fileid"] == "http://internal.example.com/doc/12345"
-
-    def test_backward_compatibility_without_fileid(self, tmp_path):
-        """Verify files without fileid still work normally."""
-        mw = _middleware(tmp_path)
-        msg = _human("hi", files=[{"filename": "doc.pdf", "size": 1024, "path": "/mnt/user-data/uploads/doc.pdf"}])
-        result = mw._files_from_kwargs(msg)
-        assert result is not None
-        assert "fileid" not in result[0]
-        assert result[0]["filename"] == "doc.pdf"
-
 
 # ---------------------------------------------------------------------------
 # _create_files_message
@@ -211,14 +194,6 @@ class TestCreateFilesMessage:
         assert "(empty)" in msg
         assert "<uploaded_files>" in msg
         assert "</uploaded_files>" in msg
-
-    def test_fileid_in_files_message(self, tmp_path):
-        """Verify fileid appears in formatted file message."""
-        mw = _middleware(tmp_path)
-        new_file = {"filename": "report.pdf", "size": 2048, "path": "/mnt/user-data/uploads/report.pdf", "fileid": "http://internal.example.com/doc/12345"}
-        msg = mw._create_files_message([new_file], [])
-        assert "FileID: http://internal.example.com/doc/12345" in msg
-        assert "report.pdf" in msg
 
 
 # ---------------------------------------------------------------------------

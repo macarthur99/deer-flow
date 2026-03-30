@@ -53,12 +53,8 @@ async def _async_checkpointer(config) -> AsyncIterator[Checkpointer]:
         except ImportError as exc:
             raise ImportError(SQLITE_INSTALL) from exc
 
-        import pathlib
-
-        conn_str = _resolve_sqlite_conn_str(config.connection_string or "store.db")
-        # Only create parent directories for real filesystem paths
-        if conn_str != ":memory:" and not conn_str.startswith("file:"):
-            pathlib.Path(conn_str).parent.mkdir(parents=True, exist_ok=True)
+        conn_str = resolve_sqlite_conn_str(config.connection_string or "store.db")
+        ensure_sqlite_parent_dir(conn_str)
         async with AsyncSqliteSaver.from_conn_string(conn_str) as saver:
             await saver.setup()
             yield saver
@@ -87,7 +83,6 @@ async def _async_checkpointer(config) -> AsyncIterator[Checkpointer]:
             await pool.wait()
             saver = AsyncPostgresSaver(conn=pool)
             await saver.setup()
-            logger.info("Checkpointer: using AsyncPostgresSaver with connection pool (min=%d, max=%d)", config.pool_min_size, config.pool_max_size)
             yield saver
         return
 

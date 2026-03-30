@@ -197,18 +197,15 @@ def get_memory_storage() -> MemoryStorage:
         try:
             module_path, class_name = storage_class_path.rsplit(".", 1)
             import importlib
+
             module = importlib.import_module(module_path)
             storage_class = getattr(module, class_name)
 
             # Validate that the configured storage is a MemoryStorage implementation
             if not isinstance(storage_class, type):
-                raise TypeError(
-                    f"Configured memory storage '{storage_class_path}' is not a class: {storage_class!r}"
-                )
+                raise TypeError(f"Configured memory storage '{storage_class_path}' is not a class: {storage_class!r}")
             if not issubclass(storage_class, MemoryStorage):
-                raise TypeError(
-                    f"Configured memory storage '{storage_class_path}' is not a subclass of MemoryStorage"
-                )
+                raise TypeError(f"Configured memory storage '{storage_class_path}' is not a subclass of MemoryStorage")
 
             _storage_instance = storage_class()
         except Exception as e:
