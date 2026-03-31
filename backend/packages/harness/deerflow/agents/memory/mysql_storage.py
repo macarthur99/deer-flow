@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text, func
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 
 from deerflow.agents.memory.storage import MemoryStorage, create_empty_memory
@@ -46,6 +46,7 @@ class MySQLMemoryStorage(MemoryStorage):
     def load(self, user_id: str, agent_name: str | None = None) -> dict[str, Any]:
         """Load memory data from database."""
         self._validate_user_id(user_id)
+        agent_name = agent_name or ""
         if agent_name:
             self._validate_agent_name(agent_name)
 
@@ -79,6 +80,7 @@ class MySQLMemoryStorage(MemoryStorage):
 
     def reload(self, user_id: str, agent_name: str | None = None) -> dict[str, Any]:
         """Force reload memory data from database."""
+        agent_name = agent_name or ""
         cache_key = (user_id, agent_name)
         if cache_key in self._cache:
             del self._cache[cache_key]
@@ -87,6 +89,7 @@ class MySQLMemoryStorage(MemoryStorage):
     def save(self, memory_data: dict[str, Any], user_id: str, agent_name: str | None = None) -> bool:
         """Save memory data to database."""
         self._validate_user_id(user_id)
+        agent_name = agent_name or ""
         if agent_name:
             self._validate_agent_name(agent_name)
 
@@ -123,3 +126,45 @@ class MySQLMemoryStorage(MemoryStorage):
         except Exception as e:
             logger.error(f"Failed to save memory to database: {e}")
             return False
+
+    def cleanup_duplicates(self) -> int:
+        """Remove duplicate records where agent_name is NULL, keeping the most recent."""
+        engine = self._get_engine()
+        if engine is None:
+            return 0
+
+        try:
+            with engine.begin() as conn:
+                # Find user_ids with multiple NULL agent_name records
+                duplicates_query = text("""
+                    SELECT user_id, COUNT(*) as cnt
+                    FROM user_memory
+                    WHERE agent_name IS NULL
+                    GROUP BY user_id
+                    HAVING cnt > 1
+                """)
+                duplicates = conn.execute(duplicates_query).fetchall()
+
+                removed_count = 0
+                for user_id, _ in duplicates:
+                    # Keep most recent, delete others
+                    delete_query = text("""
+                        DELETE FROM user_memory
+                        WHERE user_id = :user_id AND agent_name IS NULL
+                        AND id NOT IN (
+                            SELECT id FROM (
+                                SELECT id FROM user_memory
+                                WHERE user_id = :user_id AND agent_name IS NULL
+                                ORDER BY updated_at DESC
+                                LIMIT 1
+                            ) AS keeper
+                        )
+                    """)
+                    result = conn.execute(delete_query, {"user_id": user_id})
+                    removed_count += result.rowcount
+
+                logger.info(f"Cleaned up {removed_count} duplicate records")
+                return removed_count
+        except Exception as e:
+            logger.error(f"Failed to cleanup duplicates: {e}")
+            return 0
