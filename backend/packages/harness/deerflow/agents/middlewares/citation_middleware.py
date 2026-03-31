@@ -26,56 +26,45 @@ class CitationMiddleware(AgentMiddleware):
         return {}
 
     def after_model(self, state: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
-        """Extract URLs from AI and Tool messages, deduplicate, and renumber citations."""
+        """Extract fileIds from AI and Tool messages, deduplicate, and assign numbers."""
         messages = state.get("messages", [])
         if not messages:
             return {}
 
         existing_citations = state.get("citations", [])
-        new_urls = []
-        tool_citations = []  # [(msg_index, old_num, url)]
+        new_file_ids = []
+        citations_to_update = []  # [(msg_index, file_id)]
 
-        # Extract from all AIMessages
-        for msg in messages:
-            if isinstance(msg, AIMessage) and isinstance(msg.content, str):
-                urls = set()
-                markdown_links = re.findall(r'\[(?:citation:)?\d*[^\]]*\]\((https?://[^\)]+)\)', msg.content)
-                urls.update(markdown_links)
-                plain_urls = re.findall(r'https?://[^\s\)]+', msg.content)
-                urls.update(plain_urls)
-                for url in urls:
-                    if url not in existing_citations and url not in new_urls:
-                        new_urls.append(url)
-
-        # Extract from ToolMessages
+        # Extract from all AIMessages and ToolMessages
         for i, msg in enumerate(messages):
-            if isinstance(msg, ToolMessage):
-                matches = re.findall(r'\[citation:(\d+)\]\((https?://[^\)]+)\)', msg.content)
-                for old_num, url in matches:
-                    tool_citations.append((i, int(old_num), url))
-                    if url not in existing_citations and url not in new_urls:
-                        new_urls.append(url)
+            if isinstance(msg, (AIMessage, ToolMessage)) and isinstance(msg.content, str):
+                # Match both [citation](fileId) and [citation:N](fileId) for backward compatibility
+                matches = re.findall(r'\[citation(?::\d+)?\]\(([^\)]+)\)', msg.content)
+                for file_id in matches:
+                    citations_to_update.append((i, file_id))
+                    if file_id not in existing_citations and file_id not in new_file_ids:
+                        new_file_ids.append(file_id)
 
-        # Build global URL to index mapping
-        all_citations = existing_citations + new_urls
-        url_to_index = {url: i + 1 for i, url in enumerate(all_citations)}
+        # Build global fileId to index mapping
+        all_citations = existing_citations + new_file_ids
+        file_id_to_index = {file_id: i + 1 for i, file_id in enumerate(all_citations)}
 
-        # Renumber ToolMessages if needed
+        # Update all citations with numbers
         updated_messages = None
-        if tool_citations:
+        if citations_to_update:
             updated_messages = list(messages)
-            for msg_idx, old_num, url in tool_citations:
-                new_num = url_to_index[url]
-                if new_num != old_num:
-                    msg = updated_messages[msg_idx]
-                    pattern = rf'\[citation:{old_num}\]\({re.escape(url)}\)'
-                    replacement = f'[citation:{new_num}]({url})'
-                    new_content = re.sub(pattern, replacement, msg.content)
-                    updated_messages[msg_idx] = msg.model_copy(update={"content": new_content})
+            for msg_idx, file_id in citations_to_update:
+                num = file_id_to_index[file_id]
+                msg = updated_messages[msg_idx]
+                # Replace both numbered and unnumbered formats
+                pattern = rf'\[citation(?::\d+)?\]\({re.escape(file_id)}\)'
+                replacement = f'[citation:{num}]({file_id})'
+                new_content = re.sub(pattern, replacement, msg.content)
+                updated_messages[msg_idx] = msg.model_copy(update={"content": new_content})
 
         result = {}
-        if new_urls:
-            result["citations"] = new_urls
+        if new_file_ids:
+            result["citations"] = new_file_ids
         if updated_messages:
             result["messages"] = updated_messages
         return result

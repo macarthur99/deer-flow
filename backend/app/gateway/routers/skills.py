@@ -133,7 +133,7 @@ async def update_skill(skill_name: str, user_id: str, request: SkillUpdateReques
         logger.info(f"Skills configuration updated and saved to: {config_path}")
         reload_extensions_config()
 
-        skills = load_skills(enabled_only=False)
+        skills = load_skills(user_id=user_id, enabled_only=False)
         updated_skill = next((s for s in skills if s.name == skill_name), None)
 
         if updated_skill is None:

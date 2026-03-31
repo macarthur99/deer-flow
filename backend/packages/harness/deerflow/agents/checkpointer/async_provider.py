@@ -27,7 +27,7 @@ from deerflow.agents.checkpointer.provider import (
     POSTGRES_CONN_REQUIRED,
     POSTGRES_INSTALL,
     SQLITE_INSTALL,
-    _resolve_sqlite_conn_str,
+    resolve_sqlite_conn_str,
 )
 from deerflow.config.app_config import get_app_config
 

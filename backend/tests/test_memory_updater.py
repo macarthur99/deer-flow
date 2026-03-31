@@ -148,7 +148,7 @@ def test_apply_updates_preserves_threshold_and_max_facts_trimming() -> None:
 
 def test_clear_memory_data_resets_all_sections() -> None:
     with patch("deerflow.agents.memory.updater._save_memory_to_file", return_value=True):
-        result = clear_memory_data()
+        result = clear_memory_data("test_user")
 
     assert result["version"] == "1.0"
     assert result["facts"] == []
@@ -182,7 +182,7 @@ def test_delete_memory_fact_removes_only_matching_fact() -> None:
         patch("deerflow.agents.memory.updater.get_memory_data", return_value=current_memory),
         patch("deerflow.agents.memory.updater._save_memory_to_file", return_value=True),
     ):
-        result = delete_memory_fact("fact_delete")
+        result = delete_memory_fact("fact_delete", "test_user")
 
     assert [fact["id"] for fact in result["facts"]] == ["fact_keep"]
 
@@ -194,6 +194,7 @@ def test_create_memory_fact_appends_manual_fact() -> None:
     ):
         result = create_memory_fact(
             content="  User prefers concise code reviews.  ",
+            user_id="test_user",
             category="preference",
             confidence=0.88,
         )
@@ -207,7 +208,7 @@ def test_create_memory_fact_appends_manual_fact() -> None:
 
 def test_create_memory_fact_rejects_empty_content() -> None:
     try:
-        create_memory_fact(content="   ")
+        create_memory_fact(content="   ", user_id="test_user")
     except ValueError as exc:
         assert exc.args == ("content",)
     else:
@@ -217,7 +218,7 @@ def test_create_memory_fact_rejects_empty_content() -> None:
 def test_create_memory_fact_rejects_invalid_confidence() -> None:
     for confidence in (-0.1, 1.1, float("nan"), float("inf"), float("-inf")):
         try:
-            create_memory_fact(content="User likes tests", confidence=confidence)
+            create_memory_fact(content="User likes tests", user_id="test_user", confidence=confidence)
         except ValueError as exc:
             assert exc.args == ("confidence",)
         else:
@@ -227,7 +228,7 @@ def test_create_memory_fact_rejects_invalid_confidence() -> None:
 def test_delete_memory_fact_raises_for_unknown_id() -> None:
     with patch("deerflow.agents.memory.updater.get_memory_data", return_value=_make_memory()):
         try:
-            delete_memory_fact("fact_missing")
+            delete_memory_fact("fact_missing", "test_user")
         except KeyError as exc:
             assert exc.args == ("fact_missing",)
         else:
@@ -252,10 +253,10 @@ def test_import_memory_data_saves_and_returns_imported_memory() -> None:
     mock_storage.load.return_value = imported_memory
 
     with patch("deerflow.agents.memory.updater.get_memory_storage", return_value=mock_storage):
-        result = import_memory_data(imported_memory)
+        result = import_memory_data(imported_memory, "test_user")
 
-    mock_storage.save.assert_called_once_with(imported_memory, None)
-    mock_storage.load.assert_called_once_with(None)
+    mock_storage.save.assert_called_once_with(imported_memory, "test_user", None)
+    mock_storage.load.assert_called_once_with("test_user", None)
     assert result == imported_memory
 
 
@@ -287,6 +288,7 @@ def test_update_memory_fact_updates_only_matching_fact() -> None:
     ):
         result = update_memory_fact(
             fact_id="fact_edit",
+            user_id="test_user",
             content="User prefers spaces",
             category="workflow",
             confidence=0.91,
@@ -320,6 +322,7 @@ def test_update_memory_fact_preserves_omitted_fields() -> None:
     ):
         result = update_memory_fact(
             fact_id="fact_edit",
+            user_id="test_user",
             content="User prefers spaces",
         )
 
@@ -333,6 +336,7 @@ def test_update_memory_fact_raises_for_unknown_id() -> None:
         try:
             update_memory_fact(
                 fact_id="fact_missing",
+                user_id="test_user",
                 content="User prefers concise code reviews.",
                 category="preference",
                 confidence=0.88,
@@ -365,6 +369,7 @@ def test_update_memory_fact_rejects_invalid_confidence() -> None:
             try:
                 update_memory_fact(
                     fact_id="fact_edit",
+                    user_id="test_user",
                     content="User prefers spaces",
                     confidence=confidence,
                 )
@@ -496,7 +501,7 @@ class TestUpdateMemoryStructuredResponse:
             ai_msg.type = "ai"
             ai_msg.content = "Hi there"
             ai_msg.tool_calls = []
-            result = updater.update_memory([msg, ai_msg])
+            result = updater.update_memory([msg, ai_msg], "test_user")
 
         assert result is True
 
@@ -519,6 +524,6 @@ class TestUpdateMemoryStructuredResponse:
             ai_msg.type = "ai"
             ai_msg.content = "Hi"
             ai_msg.tool_calls = []
-            result = updater.update_memory([msg, ai_msg])
+            result = updater.update_memory([msg, ai_msg], "test_user")
 
         assert result is True

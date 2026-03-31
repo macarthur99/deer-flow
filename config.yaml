@@ -62,7 +62,17 @@ models:
         thinking:
           type: enabled
 
-  
+  - name: local-llm
+    display_name: Local LLM (TGI)
+    use: langchain_openai:ChatOpenAI
+    model: mssgpt
+    base_url: http://192.168.8.157:8103/ChatModelServing/v1
+    api_key: EMPTY
+    max_tokens: 4096
+    temperature: 0.01
+    supports_thinking: true
+    supports_vision: false
+
   # Example: OpenAI model
   # - name: gpt-4
   #   display_name: GPT-4
@@ -230,7 +240,7 @@ tools:
   - name: web_search
     group: web
     use: deerflow.community.internal_search.tools:web_search_tool
-    base_url: http://192.168.81.103:8080/api/search
+    base_url: http://192.168.82.122:8080/api/search
     top_k: 5
     # api_key: $TAVILY_API_KEY  # Set if needed
 
@@ -437,7 +447,7 @@ summarization:
 # ============================================================================
 # Configure database connection for persistent storage (memory, thread_user, etc.)
 database:
-  url: "mysql+aiomysql://root:8712572a@192.168.81.103:3306/deerflow"
+  url: "mysql+aiomysql://823admin:DATABASE_treeshade_2024_04@192.168.8.131:3306/aiwriting"
   pool_size: 10
   max_overflow: 20
 
@@ -487,7 +497,7 @@ memory:
 # PostgreSQL (multi-process, production):
 checkpointer:
   type: postgres
-  connection_string: postgresql://postgres:8712572a@192.168.81.103:5432/deerflow
+  connection_string: postgresql://postgres:841_sjzc@192.168.82.122:5432/deerflow
 
 # ============================================================================
 # IM Channels Configuration

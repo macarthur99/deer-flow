@@ -31,8 +31,7 @@ When you complete the task, provide:
 3. Any relevant file paths, data, or artifacts created
 4. Issues encountered (if any)
 5. Citations: MANDATORY when using web_search
-   - Format: `[citation:[N]](fileId)` where N is sequential number (1, 2, 3...)
-   - Same fileId = same number (reuse the number for repeated sources)
+   - Format: `[citation](fileId)` (NO number needed - system handles numbering)
    - Place inline immediately after the claim
    - Also add a "Sources" section at the end listing all references
 </output_format>

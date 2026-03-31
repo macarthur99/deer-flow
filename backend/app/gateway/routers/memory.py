@@ -180,10 +180,10 @@ async def reload_memory(user_id: str) -> MemoryResponse:
     summary="Clear All Memory Data",
     description="Delete all saved memory data and reset the memory structure to an empty state.",
 )
-async def clear_memory() -> MemoryResponse:
+async def clear_memory(user_id: str) -> MemoryResponse:
     """Clear all persisted memory data."""
     try:
-        memory_data = clear_memory_data()
+        memory_data = clear_memory_data(user_id)
     except OSError as exc:
         raise HTTPException(status_code=500, detail="Failed to clear memory data.") from exc
 
@@ -196,11 +196,12 @@ async def clear_memory() -> MemoryResponse:
     summary="Create Memory Fact",
     description="Create a single saved memory fact manually.",
 )
-async def create_memory_fact_endpoint(request: FactCreateRequest) -> MemoryResponse:
+async def create_memory_fact_endpoint(request: FactCreateRequest, user_id: str) -> MemoryResponse:
     """Create a single fact manually."""
     try:
         memory_data = create_memory_fact(
             content=request.content,
+            user_id=user_id,
             category=request.category,
             confidence=request.confidence,
         )
@@ -218,10 +219,10 @@ async def create_memory_fact_endpoint(request: FactCreateRequest) -> MemoryRespo
     summary="Delete Memory Fact",
     description="Delete a single saved memory fact by its fact id.",
 )
-async def delete_memory_fact_endpoint(fact_id: str) -> MemoryResponse:
+async def delete_memory_fact_endpoint(fact_id: str, user_id: str) -> MemoryResponse:
     """Delete a single fact from memory by fact id."""
     try:
-        memory_data = delete_memory_fact(fact_id)
+        memory_data = delete_memory_fact(fact_id, user_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"Memory fact '{fact_id}' not found.") from exc
     except OSError as exc:
@@ -236,11 +237,12 @@ async def delete_memory_fact_endpoint(fact_id: str) -> MemoryResponse:
     summary="Patch Memory Fact",
     description="Partially update a single saved memory fact by its fact id while preserving omitted fields.",
 )
-async def update_memory_fact_endpoint(fact_id: str, request: FactPatchRequest) -> MemoryResponse:
+async def update_memory_fact_endpoint(fact_id: str, request: FactPatchRequest, user_id: str) -> MemoryResponse:
     """Partially update a single fact manually."""
     try:
         memory_data = update_memory_fact(
             fact_id=fact_id,
+            user_id=user_id,
             content=request.content,
             category=request.category,
             confidence=request.confidence,
@@ -261,9 +263,9 @@ async def update_memory_fact_endpoint(fact_id: str, request: FactPatchRequest) -
     summary="Export Memory Data",
     description="Export the current global memory data as JSON for backup or transfer.",
 )
-async def export_memory() -> MemoryResponse:
+async def export_memory(user_id: str) -> MemoryResponse:
     """Export the current memory data."""
-    memory_data = get_memory_data()
+    memory_data = get_memory_data(user_id)
     return MemoryResponse(**memory_data)
 
 
@@ -273,10 +275,10 @@ async def export_memory() -> MemoryResponse:
     summary="Import Memory Data",
     description="Import and overwrite the current global memory data from a JSON payload.",
 )
-async def import_memory(request: MemoryResponse) -> MemoryResponse:
+async def import_memory(request: MemoryResponse, user_id: str) -> MemoryResponse:
     """Import and persist memory data."""
     try:
-        memory_data = import_memory_data(request.model_dump())
+        memory_data = import_memory_data(request.model_dump(), user_id)
     except OSError as exc:
         raise HTTPException(status_code=500, detail="Failed to import memory data.") from exc
 

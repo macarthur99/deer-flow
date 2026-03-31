@@ -684,7 +684,7 @@ class DeerFlowClient:
     # Public API — memory management
     # ------------------------------------------------------------------
 
-    def reload_memory(self) -> dict:
+    def reload_memory(self, user_id: str = "default") -> dict:
         """Reload memory data from file, forcing cache invalidation.
 
         Returns:
@@ -692,29 +692,30 @@ class DeerFlowClient:
         """
         from deerflow.agents.memory.updater import reload_memory_data
 
-        return reload_memory_data()
+        return reload_memory_data(user_id)
 
-    def clear_memory(self) -> dict:
+    def clear_memory(self, user_id: str = "default") -> dict:
         """Clear all persisted memory data."""
         from deerflow.agents.memory.updater import clear_memory_data
 
-        return clear_memory_data()
+        return clear_memory_data(user_id)
 
-    def create_memory_fact(self, content: str, category: str = "context", confidence: float = 0.5) -> dict:
+    def create_memory_fact(self, content: str, user_id: str = "default", category: str = "context", confidence: float = 0.5) -> dict:
         """Create a single fact manually."""
         from deerflow.agents.memory.updater import create_memory_fact
 
-        return create_memory_fact(content=content, category=category, confidence=confidence)
+        return create_memory_fact(content=content, user_id=user_id, category=category, confidence=confidence)
 
-    def delete_memory_fact(self, fact_id: str) -> dict:
+    def delete_memory_fact(self, fact_id: str, user_id: str = "default") -> dict:
         """Delete a single fact from memory by fact id."""
         from deerflow.agents.memory.updater import delete_memory_fact
 
-        return delete_memory_fact(fact_id)
+        return delete_memory_fact(fact_id, user_id)
 
     def update_memory_fact(
         self,
         fact_id: str,
+        user_id: str = "default",
         content: str | None = None,
         category: str | None = None,
         confidence: float | None = None,
@@ -724,6 +725,7 @@ class DeerFlowClient:
 
         return update_memory_fact(
             fact_id=fact_id,
+            user_id=user_id,
             content=content,
             category=category,
             confidence=confidence,

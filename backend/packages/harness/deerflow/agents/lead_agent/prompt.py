@@ -275,72 +275,29 @@ You: "Deploying to staging..." [proceed]
 **CRITICAL: Always include citations when using web search results**
 
 - **When to Use**: MANDATORY after web_search or any external information source
-- **Format**: Use Markdown link format `[citation:[N]](fileId)` immediately after the claim (N is sequential number)
-- **Numbering**: Use sequential numbers (1, 2, 3...) based on unique fileIds
-  - Same fileId = Same number (e.g., if fileId A appears twice, both use [citation:[1]])
-  - Different fileId = New number (e.g., fileId B gets [citation:[2]])
-  - Number assignment order: first appearance of each unique fileId
-- **Document Citations**: For uploaded files or internal search results with FileID:
-  - Use the FileID as the citation link: `[citation:[N]](fileId)`
-  - Example: 根据报告 [citation:[1]](http://internal.example.com/doc/12345)
-  - FileIDs are shown in <uploaded_files> section or returned by internal_search tool
+- **Format**: Use `[citation](fileId)` immediately after the claim (NO number needed)
+- **Middleware Handles Numbering**: The system will automatically assign and manage citation numbers
+- **Document Citations**: For uploaded files or search results, use the fileId/URL as the link
+  - Example: 根据报告 [citation](http://internal.example.com/doc/12345)
 - **Placement**: Inline citations should appear right after the sentence or claim they support
-- **Sources Section**: Also collect all citations in a "Sources" section at the end of reports
+- **Sources Section**: Also collect all citations in a "Sources" section at the end
 
 **Example - Inline Citations:**
 ```markdown
-The key AI trends for 2026 include enhanced reasoning capabilities and multimodal integration
-[citation:[1]](https://techcrunch.com/ai-trends).
-Recent breakthroughs in language models have also accelerated progress
-[citation:[2]](https://openai.com/research).
-Industry experts also highlight the importance of multimodal systems
-[citation:[1]](https://techcrunch.com/ai-trends).
+The key AI trends include enhanced reasoning [citation](https://techcrunch.com/ai-trends).
+Recent breakthroughs have accelerated progress [citation](https://openai.com/research).
+Industry experts highlight multimodal systems [citation](https://techcrunch.com/ai-trends).
 ```
-
-**Example - Deep Research Report with Citations:**
-```markdown
-## Executive Summary
-
-DeerFlow is an open-source AI agent framework that gained significant traction in early 2026
-[citation:[1]](https://github.com/bytedance/deer-flow). The project focuses on
-providing a production-ready agent system with sandbox execution and memory management
-[citation:[2]](https://deer-flow.dev/docs).
-
-## Key Analysis
-
-### Architecture Design
-
-The system uses LangGraph for workflow orchestration [citation:[3]](https://langchain.com/langgraph),
-combined with a FastAPI gateway for REST API access [citation:[4]](https://fastapi.tiangolo.com).
-
-## Sources
-
-### Primary Sources
-- [GitHub Repository](https://github.com/bytedance/deer-flow) - Official source code and documentation
-- [DeerFlow Documentation](https://deer-flow.dev/docs) - Technical specifications
-
-### Media Coverage
-- [AI Trends 2026](https://techcrunch.com/ai-trends) - Industry analysis
-```
-
-**CRITICAL: Sources section format:**
-- Every item in the Sources section MUST be a clickable markdown link with fileId
-- Use standard markdown link `[Title](fileId) - Description` format (NOT `[citation:...]` format)
-- The `[citation:[N]](fileId)` format is ONLY for inline citations within the report body
-- ❌ WRONG: `GitHub 仓库 - 官方源代码和文档` (no fileId!)
-- ❌ WRONG in Sources: `[citation:[GitHub Repository]](fileId)` (citation prefix is for inline only!)
-- ✅ RIGHT in Sources: `[GitHub Repository](https://github.com/bytedance/deer-flow) - 官方源代码和文档`
 
 **WORKFLOW for Research Tasks:**
-1. Use web_search to find sources → Extract {{fileName, fileId, snippet}} from results
-2. Write content with inline citations: `claim [citation:[N]](fileId)` (N = 1, 2, 3...)
-3. Collect all citations in a "Sources" section at the end with full titles
+1. Use web_search to find sources → Extract fileId/URL from results
+2. Write content with inline citations: `claim [citation](fileId)`
+3. Collect all citations in a "Sources" section with full titles
 4. NEVER write claims without citations when sources are available
 
 **CRITICAL RULES:**
-- ❌ DO NOT write research content without citations
-- ❌ DO NOT forget to extract fileIds from search results
-- ✅ ALWAYS add `[citation:[N]](fileId)` after claims from external sources
+- ❌ DO NOT manually number citations
+- ✅ ALWAYS use `[citation](fileId)` format (system handles numbering)
 - ✅ ALWAYS include a "Sources" section listing all references
 </citations>
 

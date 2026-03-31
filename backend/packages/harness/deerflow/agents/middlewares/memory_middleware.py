@@ -132,7 +132,7 @@ class MemoryMiddleware(AgentMiddleware[MemoryMiddlewareState]):
             return None
 
         if not user_id:
-            print("MemoryMiddleware: No user_id in context, skipping memory update")
+            logger.debug("No user_id in context, skipping memory update")
             return None
 
         # Get messages from state
