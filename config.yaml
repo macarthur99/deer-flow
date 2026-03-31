@@ -74,7 +74,7 @@ summarization:
   trim_tokens_to_summarize: 155640
   summary_prompt: null
 database:
-  url: mysql+aiomysql://823admin:DATABASE_treeshade_2024_04@192.168.8.131:3306/aiwriting
+  url: mysql+aiomysql://root:DATABASE_treeshade_2024_04@192.168.8.40:4000/aiwriting
   pool_size: 10
   max_overflow: 20
 memory:

@@ -23,7 +23,7 @@ from app.gateway.routers import (
     uploads,
 )
 from deerflow.config.app_config import get_app_config
-from deerflow.database.connection import init_async_engine, close_async_engine
+from deerflow.database.connection import init_async_engine, close_async_engine, get_async_engine
 
 # Configure logging
 logging.basicConfig(
@@ -54,6 +54,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         await init_async_engine()
         logger.info("Database engine initialized successfully")
+
+        # Auto-create tables if database is configured
+        engine = get_async_engine()
+        if engine:
+            from deerflow.database.memory import create_memory_table_async
+            from deerflow.database.thread_user import create_table as create_thread_users_table
+
+            await create_memory_table_async(engine)
+            await create_thread_users_table(engine)
+            logger.info("Database tables ensured")
     except Exception as e:
         logger.warning(f"Failed to initialize database engine: {e}")
 

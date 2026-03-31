@@ -1,33 +1,83 @@
+import logging
 import re
-from typing import Any
+from typing import Any, override
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import AIMessage, ToolMessage
+from langgraph.runtime import Runtime
+
+from deerflow.sandbox.sandbox_provider import get_sandbox_provider
+
+logger = logging.getLogger(__name__)
+
+
+def _normalize_content(content):
+    """Extract text from string or structured content."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                parts.append(item.get("text", ""))
+        return "\n".join(parts)
+    return str(content)
 
 
 class CitationMiddleware(AgentMiddleware):
     """Extract and manage citations from AI messages."""
 
-    def before_model(self, state: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
-        """Inject citation list into system prompt."""
-        citations = state.get("citations", [])
-        if not citations:
-            return {}
+    def _replace_citations(self, content: str, file_id_to_index: dict[str, int]) -> str:
+        """Replace [citation](fileId) with [citation:N](fileId)."""
+        def replace(match):
+            file_id = match.group(1)
+            num = file_id_to_index.get(file_id)
+            return f'[citation:{num}]({file_id})' if num else match.group(0)
+        return re.sub(r'\[citation(?::\d+)?\]\(([^\)]+)\)', replace, content)
 
-        # Build citation reference list
-        citation_list = "\n".join([f"[{i+1}] {url}" for i, url in enumerate(citations)])
-        citation_prompt = f"\n\n<available_citations>\nYou have access to these citations. Use [citation:N](URL) format:\n{citation_list}\n</available_citations>"
+    def _update_output_files(self, state: dict[str, Any], file_id_to_index: dict[str, int]) -> None:
+        """Update output files with numbered citations."""
+        sandbox_state = state.get("sandbox")
+        if not sandbox_state or not sandbox_state.get("sandbox_id"):
+            return
 
-        messages = state.get("messages", [])
-        if messages and hasattr(messages[0], "content"):
-            # Append to system message
-            messages[0].content += citation_prompt
+        sandbox_id = sandbox_state["sandbox_id"]
+        sandbox = get_sandbox_provider().get(sandbox_id)
+        if not sandbox:
+            return
 
-        return {}
+        # Scan outputs directory for all files
+        try:
+            output_dir = "/mnt/user-data/outputs/"
+            files = sandbox.list_dir(output_dir)
 
-    def after_model(self, state: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+            for file_info in files:
+                if file_info.get("type") != "file":
+                    continue
+
+                # Only process markdown files
+                file_name = file_info.get("name", "")
+                if not file_name.endswith(".md"):
+                    continue
+
+                file_path = output_dir + file_name
+                try:
+                    content = sandbox.read_file(file_path)
+                    updated = self._replace_citations(content, file_id_to_index)
+                    if updated != content:
+                        sandbox.write_file(file_path, updated)
+                        logger.info(f"Updated citations in {file_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to update {file_path}: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to scan output directory: {e}")
+
+    @override
+    def after_agent(self, state: dict[str, Any], runtime: Runtime) -> dict[str, Any] | None:
         """Extract fileIds from AI and Tool messages, deduplicate, and assign numbers."""
         messages = state.get("messages", [])
+        logger.info(f"CitationMiddleware.after_agent: Processing {len(messages)} messages")
+
         if not messages:
             return {}
 
@@ -37,13 +87,30 @@ class CitationMiddleware(AgentMiddleware):
 
         # Extract from all AIMessages and ToolMessages
         for i, msg in enumerate(messages):
-            if isinstance(msg, (AIMessage, ToolMessage)) and isinstance(msg.content, str):
-                # Match both [citation](fileId) and [citation:N](fileId) for backward compatibility
-                matches = re.findall(r'\[citation(?::\d+)?\]\(([^\)]+)\)', msg.content)
-                for file_id in matches:
-                    citations_to_update.append((i, file_id))
-                    if file_id not in existing_citations and file_id not in new_file_ids:
-                        new_file_ids.append(file_id)
+            logger.info(f"Message {i}: type={type(msg).__name__}, content_type={type(msg.content).__name__}")
+
+            if isinstance(msg, (AIMessage, ToolMessage)):
+                # Log raw content for debugging
+                raw_preview = str(msg.content)[:300] if msg.content else "None"
+                logger.info(f"Message {i} raw content preview: {raw_preview}")
+
+                content = _normalize_content(msg.content)
+                logger.info(f"Message {i} normalized content length: {len(content) if content else 0}")
+
+                if content:
+                    # Match both [citation](fileId) and [citation:N](fileId) for backward compatibility
+                    matches = re.findall(r'\[citation(?::\d+)?\]\(([^\)]+)\)', content)
+                    logger.info(f"Message {i} found {len(matches)} citation matches: {matches}")
+
+                    for file_id in matches:
+                        citations_to_update.append((i, file_id))
+                        if file_id not in existing_citations and file_id not in new_file_ids:
+                            new_file_ids.append(file_id)
+
+        if new_file_ids:
+            logger.info(f"CitationMiddleware: Found new citations: {new_file_ids}")
+        else:
+            logger.info("CitationMiddleware: No new citations found")
 
         # Build global fileId to index mapping
         all_citations = existing_citations + new_file_ids
@@ -52,19 +119,34 @@ class CitationMiddleware(AgentMiddleware):
         # Update all citations with numbers
         updated_messages = None
         if citations_to_update:
+            logger.info(f"CitationMiddleware: Updating {len(citations_to_update)} citation references")
             updated_messages = list(messages)
             for msg_idx, file_id in citations_to_update:
                 num = file_id_to_index[file_id]
                 msg = updated_messages[msg_idx]
-                # Replace both numbered and unnumbered formats
                 pattern = rf'\[citation(?::\d+)?\]\({re.escape(file_id)}\)'
                 replacement = f'[citation:{num}]({file_id})'
-                new_content = re.sub(pattern, replacement, msg.content)
-                updated_messages[msg_idx] = msg.model_copy(update={"content": new_content})
+
+                if isinstance(msg.content, str):
+                    new_content = re.sub(pattern, replacement, msg.content)
+                    updated_messages[msg_idx] = msg.model_copy(update={"content": new_content})
+                elif isinstance(msg.content, list):
+                    new_content_list = []
+                    for item in msg.content:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            new_text = re.sub(pattern, replacement, item.get("text", ""))
+                            new_content_list.append({**item, "text": new_text})
+                        else:
+                            new_content_list.append(item)
+                    updated_messages[msg_idx] = msg.model_copy(update={"content": new_content_list})
 
         result = {}
         if new_file_ids:
-            result["citations"] = new_file_ids
+            result["citations"] = all_citations
         if updated_messages:
             result["messages"] = updated_messages
+
+        if file_id_to_index:
+            self._update_output_files(state, file_id_to_index)
+
         return result
