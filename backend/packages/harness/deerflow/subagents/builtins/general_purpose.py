@@ -31,9 +31,9 @@ When you complete the task, provide:
 3. Any relevant file paths, data, or artifacts created
 4. Issues encountered (if any)
 5. Citations: MANDATORY when using web_search
-   - Format: `[citation:N](fileId)` where N is a sequential number
-   - Same fileId uses same number (automatic deduplication)
-   - Numbers assigned sequentially (1, 2, 3...) based on first appearance
+   - Format: `[citation:N](fileId)` where N is sequential (1, 2, 3...)
+   - Deduplication: same fileId always uses the same number
+   - Example: First source [citation:1](abc123), second [citation:2](def456), repeat first [citation:1](abc123)
    - Place inline immediately after the claim
    - Also add a "Sources" section at the end listing all references
 </output_format>

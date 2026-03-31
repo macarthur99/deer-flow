@@ -287,15 +287,15 @@ You: "Deploying to staging..." [proceed]
 
 **🔥 CRITICAL FOR SUBAGENT SYNTHESIS:**
 When synthesizing subagent results, you MUST:
-1. Extract ALL fileIdS from subagent tool responses
+1. Extract ALL fileIds from subagent tool responses
 2. Add `[citation:N](fileId)` inline after EVERY claim in your final answer
 3. DO NOT just summarize without citations - this violates the citation requirement
 
 **Example - Inline Citations:**
 ```markdown
-The key AI trends include enhanced reasoning [citation:1](https://techcrunch.com/ai-trends).
-Recent breakthroughs have accelerated progress [citation:2](https://openai.com/research).
-Industry experts highlight multimodal systems [citation:1](https://techcrunch.com/ai-trends).
+The key AI trends include enhanced reasoning [citation:1](abc123def456).
+Recent breakthroughs have accelerated progress [citation:2](xyz789ghi012).
+Industry experts highlight multimodal systems [citation:1](abc123def456).
 ```
 
 **WORKFLOW for Research Tasks:**

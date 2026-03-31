@@ -36,20 +36,14 @@ class CitationMiddleware(AgentMiddleware):
             return f'[citation:{num}]({file_id})' if num else match.group(0)
         return re.sub(r'\[citation(?::\d+)?\]\(([^\)]+)\)', replace, content)
 
-    @override
-    def wrap_tool_call(self, tool_call_request: ToolCallRequest, runtime: Runtime) -> ToolMessage:
-        """Intercept write_file tool calls to process citations in content."""
+    def _process_write_file_citations(self, tool_call_request: ToolCallRequest, runtime: Runtime):
+        """Shared logic for processing write_file citations."""
         tool_call = tool_call_request.tool_call
-        tool_name = tool_call.get("name")
-
-        if tool_name != "write_file":
-            return tool_call_request.handler(tool_call_request)
-
         args = tool_call.get("args", {})
         content = args.get("content", "")
 
         if not content:
-            return tool_call_request.handler(tool_call_request)
+            return None
 
         state = runtime.state
         existing_citations = state.get("citations", [])
@@ -69,7 +63,31 @@ class CitationMiddleware(AgentMiddleware):
 
             logger.info(f"CitationMiddleware: Processed {len(new_file_ids)} new citations in write_file")
 
+    @override
+    def wrap_tool_call(self, tool_call_request: ToolCallRequest, runtime: Runtime) -> ToolMessage:
+        """Intercept write_file tool calls to process citations in content."""
+        tool_call = tool_call_request.tool_call
+        tool_name = tool_call.get("name")
+
+        if tool_name == "write_file":
+            self._process_write_file_citations(tool_call_request, runtime)
+
         return tool_call_request.handler(tool_call_request)
+
+    @override
+    async def awrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Any,
+    ) -> ToolMessage:
+        """Async version: Intercept write_file tool calls to process citations in content."""
+        tool_call = request.tool_call
+        tool_name = tool_call.get("name")
+
+        if tool_name == "write_file" and request.runtime:
+            self._process_write_file_citations(request, request.runtime)
+
+        return await handler(request)
 
     def _update_output_files(self, state: dict[str, Any], file_id_to_index: dict[str, int]) -> None:
         """Update output files with numbered citations."""
@@ -182,7 +200,7 @@ class CitationMiddleware(AgentMiddleware):
         if updated_messages:
             result["messages"] = updated_messages
 
-        if file_id_to_index:
-            self._update_output_files(state, file_id_to_index)
+        # if file_id_to_index:
+        #     self._update_output_files(state, file_id_to_index)
 
         return result
