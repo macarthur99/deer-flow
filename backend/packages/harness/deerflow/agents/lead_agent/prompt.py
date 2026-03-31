@@ -390,7 +390,7 @@ def _get_memory_context(user_id: str | None = None, agent_name: str | None = Non
 </memory>
 """
     except Exception as e:
-        print(f"Failed to load memory context: {e}")
+        logger.error("Failed to load memory context: %s", e)
         return ""
 
 
