@@ -4,6 +4,7 @@ from typing import Any, override
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import AIMessage, ToolMessage
+from langgraph.prebuilt.tool_node import ToolCallRequest
 from langgraph.runtime import Runtime
 
 from deerflow.sandbox.sandbox_provider import get_sandbox_provider
@@ -34,6 +35,41 @@ class CitationMiddleware(AgentMiddleware):
             num = file_id_to_index.get(file_id)
             return f'[citation:{num}]({file_id})' if num else match.group(0)
         return re.sub(r'\[citation(?::\d+)?\]\(([^\)]+)\)', replace, content)
+
+    @override
+    def wrap_tool_call(self, tool_call_request: ToolCallRequest, runtime: Runtime) -> ToolMessage:
+        """Intercept write_file tool calls to process citations in content."""
+        tool_call = tool_call_request.tool_call
+        tool_name = tool_call.get("name")
+
+        if tool_name != "write_file":
+            return tool_call_request.handler(tool_call_request)
+
+        args = tool_call.get("args", {})
+        content = args.get("content", "")
+
+        if not content:
+            return tool_call_request.handler(tool_call_request)
+
+        state = runtime.state
+        existing_citations = state.get("citations", [])
+
+        matches = re.findall(r'\[citation(?::\d+)?\]\(([^\)]+)\)', content)
+        new_file_ids = [fid for fid in matches if fid not in existing_citations]
+
+        if new_file_ids:
+            all_citations = existing_citations + new_file_ids
+            state["citations"] = all_citations
+
+            file_id_to_index = {fid: i + 1 for i, fid in enumerate(all_citations)}
+            processed_content = self._replace_citations(content, file_id_to_index)
+
+            args["content"] = processed_content
+            tool_call["args"] = args
+
+            logger.info(f"CitationMiddleware: Processed {len(new_file_ids)} new citations in write_file")
+
+        return tool_call_request.handler(tool_call_request)
 
     def _update_output_files(self, state: dict[str, Any], file_id_to_index: dict[str, int]) -> None:
         """Update output files with numbered citations."""

@@ -73,10 +73,8 @@ summarization:
     value: 50
   trim_tokens_to_summarize: 155640
   summary_prompt: null
-database:
-  url: mysql+aiomysql://root:DATABASE_treeshade_2024_04@192.168.8.40:4000/aiwriting
-  pool_size: 10
-  max_overflow: 20
+
+
 memory:
   enabled: true
   storage_class: deerflow.agents.memory.mysql_storage.MySQLMemoryStorage
@@ -87,14 +85,13 @@ memory:
   fact_confidence_threshold: 0.7
   injection_enabled: true
   max_injection_tokens: 2000
+
+database:
+  url: "mysql+aiomysql://root:8712572a@192.168.81.103:3306/deerflow"
+  pool_size: 10
+  max_overflow: 20
+
 checkpointer:
   type: postgres
-  connection_string: postgresql://postgres:841_sjzc@192.168.82.122:5432/deerflow
-citation_verification:
-  enabled: false
-  strictness: warn
-  long_text_threshold: 1000
-  tracked_tools:
-  - web_search
-  - web_fetch
-  - jina_fetch
+  connection_string: postgresql://postgres:8712572a@192.168.81.103:5432/deerflow
+
